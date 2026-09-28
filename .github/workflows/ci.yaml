@@ -1,0 +1,124 @@
+name: Build test lint and check formatting
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    name: 🧪 Host build, tests, format, lint and docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 🔀 Checkout
+        uses: actions/checkout@v7
+
+      - name: 🐋 Build the host image
+        run: docker build --file .docker/Dockerfile --target host --tag micras-lib:host .
+
+      - name: 🗃️ Restore the fetched dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/host/_deps
+            build/host/CMakeFiles/fc-stamp
+          key: deps-host-${{ hashFiles('micras_proxy/CMakeLists.txt', 'tests/CMakeLists.txt', 'cmake/micras_docs.cmake') }}
+
+      # One long lived container runs every step below, as the user that owns the checkout
+      - name: 📦 Start the host container
+        run: >
+          docker run --detach --name host --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$PWD:/project" --workdir /project micras-lib:host sleep infinity
+
+      - name: ⚙️ Configure
+        run: docker exec host cmake --preset host -DMICRAS_LIB_WERROR=ON
+
+      - name: 🔨 Build
+        run: docker exec host cmake --build --preset host
+
+      - name: 🧪 Run the tests
+        run: docker exec host ctest --preset host
+
+      - name: 🎨 Check the formatting
+        run: docker exec host cmake --build --preset host --target format_check
+
+      - name: 🚨 Lint
+        run: docker exec host cmake --build --preset host --target lint
+
+      - name: 📝 Build the documentation
+        run: docker exec host cmake --build --preset host --target docs
+
+      - name: 🔍 Check the shared code for chip macros
+        run: docker exec host scripts/check_no_chip_macros.sh
+
+      - name: 🧹 Stop the host container
+        if: always()
+        run: docker rm --force host
+
+  stm32:
+    name: 🔩 ${{ matrix.name }} reference and bench
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - family: h7
+            name: STM32H7
+          - family: g4
+            name: STM32G4
+    steps:
+      - name: 🔀 Checkout
+        uses: actions/checkout@v7
+
+      - name: 🗃️ Restore the generated Cube files
+        id: cube
+        uses: actions/cache/restore@v6
+        with:
+          path: build/generated-${{ matrix.family }}
+          key: cube-${{ matrix.family }}-${{ hashFiles(format('reference/{0}/reference.ioc', matrix.family), '.docker/Dockerfile') }}
+
+      - name: ⚙️ Generate the Cube files
+        if: steps.cube.outputs.cache-hit != 'true'
+        run: >
+          docker build --file .docker/Dockerfile --target generated-${{ matrix.family }}
+          --output type=local,dest=build/generated-${{ matrix.family }} .
+
+      - name: 🗃️ Save the generated Cube files
+        if: steps.cube.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: build/generated-${{ matrix.family }}
+          key: ${{ steps.cube.outputs.cache-primary-key }}
+
+      - name: 📂 Place the Cube files in the reference project
+        run: cp -r build/generated-${{ matrix.family }}/. reference/${{ matrix.family }}/
+
+      - name: 🐋 Build the ARM image
+        run: docker build --file .docker/Dockerfile --target stm32 --tag micras-lib:stm32 .
+
+      - name: 📦 Start the ARM container
+        run: >
+          docker run --detach --name stm32 --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$PWD:/project" --workdir /project micras-lib:stm32 sleep infinity
+
+      - name: ⚙️ Configure the reference project
+        run: docker exec stm32 cmake --preset reference-${{ matrix.family }}
+
+      - name: 🔨 Build the reference and its bench
+        run: docker exec stm32 cmake --build --preset reference-${{ matrix.family }} --parallel
+
+      - name: 🚨 Lint the stm32 backend and the bench
+        run: docker exec stm32 cmake --build --preset reference-${{ matrix.family }} --target lint
+
+      - name: 🧹 Stop the ARM container
+        if: always()
+        run: docker rm --force stm32

@@ -1,0 +1,95 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 28,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "host-base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc-15",
+                "CMAKE_CXX_COMPILER": "g++-15",
+                "MICRAS_LIB_HAL_BACKEND": "host",
+                "MICRAS_LIB_CUBE_TARGET": "micras_lib_host_board"
+            }
+        },
+        {
+            "name": "host",
+            "displayName": "Host, Debug with the address and undefined behavior sanitizers",
+            "inherits": "host-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+                "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+                "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+            }
+        },
+        {
+            "name": "host-release",
+            "displayName": "Host, Release",
+            "inherits": "host-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "reference-h7",
+            "displayName": "Reference STM32H725 project and its bench program",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "MICRAS_LIB_REFERENCE": "h7",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "reference-g4",
+            "displayName": "Reference STM32G474 project and its bench program",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "MICRAS_LIB_REFERENCE": "g4",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "host",
+            "configurePreset": "host"
+        },
+        {
+            "name": "host-release",
+            "configurePreset": "host-release"
+        },
+        {
+            "name": "reference-h7",
+            "configurePreset": "reference-h7"
+        },
+        {
+            "name": "reference-g4",
+            "configurePreset": "reference-g4"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "host",
+            "configurePreset": "host",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "host-release",
+            "configurePreset": "host-release",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

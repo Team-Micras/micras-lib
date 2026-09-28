@@ -1,0 +1,6 @@
+# The Cube files STM32CubeMX generates from reference.ioc
+*
+!.gitignore
+!CMakeLists.txt
+!bench.cpp
+!reference.ioc
