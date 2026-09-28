@@ -10,6 +10,7 @@ target defines an STM32H7 device (or `MICRAS_LIB_STM32_FAMILY` is `h7`):
   the cycle counter is unlocked through the lock access register of the Cortex-M7 before it starts.
 - `src/flash.cpp`: the flash driver, sectors of 128 KB programmed in 256-bit flash words.
 - `include/micras/hal/family/flash.hpp`: the flash geometry the shared `flash.hpp` reads. The storage
-  region is the upper half of bank 1: sectors 4 to 7 of an STM32H725xG.
+  region is the upper half of bank 1: sectors 4 to 7 of an STM32H725xG, from 0x08080000. The flash
+  driver derives the region's address from these constants, as every family does.
 
 The code in `../src` is the same on every family and names no chip.

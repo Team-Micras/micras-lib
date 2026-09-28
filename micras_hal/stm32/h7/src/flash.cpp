@@ -16,10 +16,8 @@
 namespace micras::hal {
 /**
  * @brief First address of the flash memory region reserved for data storage.
- *
- * @note Needs to be here because it is not defined at compile time.
  */
-static const uint32_t base_address = FLASH_BASE + FLASH_SIZE / 2;
+static constexpr uint32_t base_address{FLASH_BASE + (family::storage_first_sector * family::sector_size)};
 
 /**
  * @brief Index of the first sector of the flash memory region reserved for data storage.
