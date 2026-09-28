@@ -3,7 +3,6 @@
  */
 
 #include <array>
-#include <cstdint>
 
 #include <doctest/doctest.h>
 
@@ -12,10 +11,11 @@
 #include "micras/hal/host/board.hpp"
 #include "micras/hal/mcu.hpp"
 #include "micras/hal/pwm.hpp"
+#include "tim.h"
+#include "usart.h"
 
 extern "C" {
 void SystemClock_Config();
-void PeriphCommonClock_Config();
 }
 
 namespace micras::test {
@@ -25,7 +25,7 @@ TEST_SUITE("mcu") {
 
         hal::Mcu::init({
             .clock_init = SystemClock_Config,
-            .peripheral_clock_init = PeriphCommonClock_Config,
+            .peripheral_clock_init = nullptr,
             .peripheral_inits = inits,
             .cpu_frequency_boost = false,
         });

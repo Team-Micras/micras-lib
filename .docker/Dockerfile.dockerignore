@@ -1,0 +1,6 @@
+# The images need no source: the CI mounts the checkout into the containers it runs
+.git/
+build/
+docs/
+reference/*/*
+!reference/*/reference.ioc

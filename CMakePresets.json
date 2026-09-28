@@ -36,6 +36,16 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "reference-h7",
+            "displayName": "Reference STM32H725 project and its bench program",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "MICRAS_LIB_REFERENCE": "h7",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
@@ -46,6 +56,10 @@
         {
             "name": "host-release",
             "configurePreset": "host-release"
+        },
+        {
+            "name": "reference-h7",
+            "configurePreset": "reference-h7"
         }
     ],
     "testPresets": [

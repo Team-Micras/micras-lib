@@ -27,10 +27,11 @@ TIM_TypeDef tim5_registers{};
 TIM_TypeDef tim8_registers{};
 TIM_TypeDef tim15_registers{};
 SPI_TypeDef spi3_registers{};
+}  // namespace
 
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
-void init_timer(
+static void init_timer(
     TIM_HandleTypeDef& handle, TIM_TypeDef& registers, const char* name, uint32_t prescaler, uint32_t counter_mode,
     uint32_t period
 ) {
@@ -40,13 +41,13 @@ void init_timer(
     handle.State = HAL_TIM_STATE_READY;
     micras::hal::host::Board::name_handle(&handle, name);
 }
-}  // namespace
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 uint32_t SystemCoreClock{400000000};
 
 GPIO_TypeDef GPIOA_instance{'A'};
 GPIO_TypeDef GPIOB_instance{'B'};
+GPIO_TypeDef GPIOC_instance{'C'};
 GPIO_TypeDef GPIOD_instance{'D'};
 
 ADC_HandleTypeDef  hadc3{};
@@ -63,14 +64,16 @@ UART_HandleTypeDef huart4{};
 
 extern "C" {
 void SystemClock_Config() { }
-
-void PeriphCommonClock_Config() { }
 }
 
 void MX_GPIO_Init() {
     using micras::hal::host::Board;
+    Board::name_gpio(Encoder_A_GPIO_Port, Encoder_A_Pin, "Encoder_A");
+    Board::name_gpio(Encoder_B_GPIO_Port, Encoder_B_Pin, "Encoder_B");
+    Board::name_gpio(PWM_GPIO_Port, PWM_Pin, "PWM");
     Board::name_gpio(Button_GPIO_Port, Button_Pin, "Button");
     Board::name_gpio(Status_LED_GPIO_Port, Status_LED_Pin, "Status_LED");
+    Board::name_gpio(PWM_DMA_GPIO_Port, PWM_DMA_Pin, "PWM_DMA");
     Board::name_gpio(SPI_CSn_GPIO_Port, SPI_CSn_Pin, "SPI_CSn");
 }
 
