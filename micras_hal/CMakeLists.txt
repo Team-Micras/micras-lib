@@ -20,6 +20,12 @@ target_link_libraries(micras_hal PUBLIC
     ${MICRAS_LIB_CUBE_TARGET}
 )
 
+# The HAL uses nothing of the core. The link only keeps the core's archive after the HAL's on a
+# consumer's link line, the order the robot's image was verified with.
+target_link_libraries(micras_hal PRIVATE
+    micras::core
+)
+
 if(MICRAS_LIB_HAL_BACKEND STREQUAL "stm32")
     # The family is read from the device macro CubeMX puts on its interface target
     if(MICRAS_LIB_STM32_FAMILY)
