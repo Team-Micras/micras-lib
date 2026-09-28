@@ -30,9 +30,24 @@ public:
      * @brief SPI mode: the clock polarity in the high bit, the clock phase in the low one.
      */
     enum class Mode : uint8_t {
+        /**
+         * @brief The clock idles low and the data is sampled on its first edge, the rising one.
+         */
         MODE_0 = 0,
+
+        /**
+         * @brief The clock idles low and the data is sampled on its second edge, the falling one.
+         */
         MODE_1 = 1,
+
+        /**
+         * @brief The clock idles high and the data is sampled on its first edge, the falling one.
+         */
         MODE_2 = 2,
+
+        /**
+         * @brief The clock idles high and the data is sampled on its second edge, the rising one.
+         */
         MODE_3 = 3,
     };
 

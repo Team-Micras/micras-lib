@@ -40,6 +40,9 @@ inline constexpr uint32_t FLASH_SECTOR_TOTAL{8U};
  * GPIO ports and pins
  *****************************************/
 
+/**
+ * @brief The GPIO ports of the reference, one instance each.
+ */
 ///@{
 extern GPIO_TypeDef GPIOA_instance;
 extern GPIO_TypeDef GPIOB_instance;
@@ -47,6 +50,9 @@ extern GPIO_TypeDef GPIOC_instance;
 extern GPIO_TypeDef GPIOD_instance;
 ///@}
 
+/**
+ * @brief The CMSIS names of the GPIO ports, the addresses of their instances.
+ */
 ///@{
 #define GPIOA (&GPIOA_instance)
 #define GPIOB (&GPIOB_instance)
@@ -54,6 +60,9 @@ extern GPIO_TypeDef GPIOD_instance;
 #define GPIOD (&GPIOD_instance)
 ///@}
 
+/**
+ * @brief The pin labels of the reference's CubeMX project: each pin and its port.
+ */
 ///@{
 #define Encoder_A_Pin GPIO_PIN_0
 #define Encoder_A_GPIO_Port GPIOA

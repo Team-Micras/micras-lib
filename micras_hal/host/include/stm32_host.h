@@ -174,6 +174,9 @@ inline constexpr uint32_t SPI_BAUDRATEPRESCALER_256{0x70000000U};
  *       rate is that divided by the prescaler.
  */
 struct SPI_TypeDef {
+    /**
+     * @brief Frequency of the bus's kernel clock, in hertz.
+     */
     uint32_t kernel_clock;
 };
 
@@ -181,8 +184,19 @@ struct SPI_TypeDef {
  * @brief Configuration of an SPI bus, as the init function fills it.
  */
 struct SPI_InitTypeDef {
+    /**
+     * @brief Level the clock idles at, SPI_POLARITY_LOW or SPI_POLARITY_HIGH.
+     */
     uint32_t CLKPolarity;
+
+    /**
+     * @brief Edge the data is sampled on, SPI_PHASE_1EDGE or SPI_PHASE_2EDGE.
+     */
     uint32_t CLKPhase;
+
+    /**
+     * @brief Divider of the kernel clock that gives the bit rate, SPI_BAUDRATEPRESCALER_2 to SPI_BAUDRATEPRESCALER_256.
+     */
     uint32_t BaudRatePrescaler;
 };
 
@@ -198,8 +212,19 @@ enum HAL_SPI_StateTypeDef : uint8_t {
  * @brief An SPI handle.
  */
 struct SPI_HandleTypeDef {
-    SPI_TypeDef*         Instance;
-    SPI_InitTypeDef      Init;
+    /**
+     * @brief Registers of the bus.
+     */
+    SPI_TypeDef* Instance;
+
+    /**
+     * @brief Configuration of the bus.
+     */
+    SPI_InitTypeDef Init;
+
+    /**
+     * @brief State of the handle.
+     */
     HAL_SPI_StateTypeDef State;
 };
 
@@ -317,6 +342,9 @@ struct IWDG_TypeDef {
  * FMAC
  *****************************************/
 
+/**
+ * @brief States of the filter accelerator's handle.
+ */
 ///@{
 inline constexpr uint32_t HAL_FMAC_STATE_RESET{0x00U};
 inline constexpr uint32_t HAL_FMAC_STATE_READY{0x20U};
