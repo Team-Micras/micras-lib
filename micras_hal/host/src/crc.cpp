@@ -8,7 +8,6 @@
 #include "micras/hal/crc.hpp"
 
 namespace micras::hal {
-namespace {
 /**
  * @brief Reverse the order of the lowest bits of a value.
  *
@@ -16,7 +15,7 @@ namespace {
  * @param width Number of bits to reflect.
  * @return The reflected bits.
  */
-uint32_t reflect(uint32_t value, uint32_t width) {
+static uint32_t reflect(uint32_t value, uint32_t width) {
     uint32_t reflected = 0;
 
     for (uint32_t bit = 0; bit < width; bit++) {
@@ -32,7 +31,7 @@ uint32_t reflect(uint32_t value, uint32_t width) {
  * @param length CRCLength field.
  * @return Width in bits.
  */
-uint32_t width_of(uint32_t length) {
+static uint32_t width_of(uint32_t length) {
     if (length == CRC_POLYLENGTH_7B) {
         return 7;
     }
@@ -47,7 +46,6 @@ uint32_t width_of(uint32_t length) {
 
     return 32;
 }
-}  // namespace
 
 Crc::Crc(const Config& config) : handle{config.handle} { }
 

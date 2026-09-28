@@ -2,6 +2,7 @@
  * @file
  */
 
+#include <cstdint>
 #include <utility>
 
 #include "micras/hal/host/clock.hpp"

@@ -10,16 +10,16 @@
 
 #include "micras/hal/flash.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::hal {
-namespace {
 /**
  * @brief Round a size up to whole flash words.
  *
  * @param size Size in bytes.
  * @return The rounded size.
  */
-constexpr uint32_t align_size(uint32_t size) {
+static constexpr uint32_t align_size(uint32_t size) {
     return (size + FlashWord::size - 1) / FlashWord::size * FlashWord::size;
 }
 
@@ -28,7 +28,7 @@ constexpr uint32_t align_size(uint32_t size) {
  *
  * @return The port.
  */
-host::FlashPort& storage() {
+static host::FlashPort& storage() {
     host::FlashPort& port = host::Board::flash();
 
     if (port.bytes.size() != Flash::total_size) {
@@ -38,7 +38,6 @@ host::FlashPort& storage() {
     port.touched = true;
     return port;
 }
-}  // namespace
 
 FlashWord::FlashWord(std::span<const uint8_t> data) {
     const auto data_address = std::bit_cast<uintptr_t>(data.data());

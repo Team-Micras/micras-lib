@@ -15,6 +15,7 @@
 
 namespace micras::nav {
 template <uint8_t width, uint8_t height>
+// NOLINTNEXTLINE(readability-function-cognitive-complexity) one ray, crossing up to four walls
 RayHit WallModel::cast(const Pose& pose, uint8_t sensor, const TMaze<width, height>& maze) const {
     const RobotModel::WallSensor& mounting = this->sensors.at(sensor);
 
@@ -31,6 +32,7 @@ RayHit WallModel::cast(const Pose& pose, uint8_t sensor, const TMaze<width, heig
     bool grazed_post = false;
 
     for (uint8_t crossing = 0; crossing < 4; crossing++) {
+        // NOLINTNEXTLINE(modernize-use-integer-sign-comparison) the comparison the robot's image was verified with
         if (column < 0 or row < 0 or column >= width or row >= height) {
             break;
         }
@@ -55,6 +57,7 @@ RayHit WallModel::cast(const Pose& pose, uint8_t sensor, const TMaze<width, heig
 
         const GridPose wall{
             .position = {.x = static_cast<uint8_t>(column), .y = static_cast<uint8_t>(row)},
+            // NOLINTNEXTLINE(readability-avoid-nested-conditional-operator) one of the four sides
             .orientation = vertical ? (direction_x > 0.0F ? Side::RIGHT : Side::LEFT) :
                                       (direction_y > 0.0F ? Side::UP : Side::DOWN),
         };
@@ -75,8 +78,10 @@ RayHit WallModel::cast(const Pose& pose, uint8_t sensor, const TMaze<width, heig
         }
 
         if (state == WallState::NO_WALL) {
+            // NOLINTBEGIN(readability-avoid-nested-conditional-operator) one step along the ray
             column = static_cast<int16_t>(column + (vertical ? (direction_x > 0.0F ? 1 : -1) : 0));
             row = static_cast<int16_t>(row + (vertical ? 0 : (direction_y > 0.0F ? 1 : -1)));
+            // NOLINTEND(readability-avoid-nested-conditional-operator)
             continue;
         }
 

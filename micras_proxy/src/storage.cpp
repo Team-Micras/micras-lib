@@ -179,7 +179,7 @@ bool Storage::save(const core::VariablePool& pool) {
     body.resize(align_size(body.size()), hal::FlashWord::erased_value);
 
     if (body.size() / hal::FlashWord::size > UINT16_MAX or
-        header_size + body.size() > this->number_of_sectors * hal::Flash::sector_size) {
+        header_size + body.size() > static_cast<std::size_t>(this->number_of_sectors) * hal::Flash::sector_size) {
         return false;
     }
 

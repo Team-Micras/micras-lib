@@ -4,6 +4,7 @@
 
 #include "micras/hal/gpio.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::hal {
 Gpio::Gpio(const Config& config) : port{config.port}, pin{config.pin} { }

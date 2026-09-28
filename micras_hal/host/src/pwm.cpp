@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 #include "micras/hal/pwm.hpp"
 
 namespace micras::hal {
@@ -14,6 +15,7 @@ namespace {
  * @brief Mask of the channel offset, which the vendor HAL uses as a bit shift.
  */
 constexpr uint32_t channel_shift_mask{0x1F};
+}  // namespace
 
 /**
  * @brief Check whether a timer counts up and down.
@@ -21,10 +23,9 @@ constexpr uint32_t channel_shift_mask{0x1F};
  * @param handle Timer handle.
  * @return True in a center-aligned mode.
  */
-bool is_center_aligned(const TIM_HandleTypeDef* handle) {
+static bool is_center_aligned(const TIM_HandleTypeDef* handle) {
     return (handle->Instance->CR1 & TIM_CR1_CMS) != 0;
 }
-}  // namespace
 
 Pwm::Pwm(const Config& config) : handle{config.handle}, channel{config.timer_channel}, inverted{config.inverted} {
     if (this->handle->State == HAL_TIM_STATE_RESET) {

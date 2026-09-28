@@ -12,11 +12,13 @@
 
 namespace micras::hal::host {
 void AdcPort::write(std::size_t index, uint32_t counts) const {
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) bounded just above
     if (index < this->buffer16.size()) {
         this->buffer16[index] = static_cast<uint16_t>(counts);
     } else if (index < this->buffer32.size()) {
         this->buffer32[index] = counts;
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 }
 
 void AdcPort::finish_sequence() const {
@@ -30,6 +32,7 @@ void UartPort::receive(uint8_t byte) {
         return;
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) the head wraps below the size
     this->rx_buffer[this->rx_head] = byte;
     this->rx_head = (this->rx_head + 1) % this->rx_buffer.size();
 }

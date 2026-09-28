@@ -3,10 +3,12 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <map>
 #include <span>
 #include <string>
@@ -29,11 +31,10 @@ class Loopback : public core::IByteStream {
 public:
     std::size_t read(std::span<uint8_t> into) override {
         const std::size_t count = std::min(into.size(), this->to_robot.size());
+        const auto        end = std::next(this->to_robot.begin(), static_cast<std::ptrdiff_t>(count));
 
-        for (std::size_t index = 0; index < count; index++) {
-            into[index] = this->to_robot.front();
-            this->to_robot.pop_front();
-        }
+        std::copy(this->to_robot.begin(), end, into.begin());
+        this->to_robot.erase(this->to_robot.begin(), end);
 
         return count;
     }
@@ -77,12 +78,13 @@ struct Message {
     MessageType type;
     Bytes       payload;
 };
+}  // namespace
 
-float to_float(uint32_t bits) {
+static float to_float(uint32_t bits) {
     return std::bit_cast<float>(bits);
 }
 
-std::vector<Message> of_type(const std::vector<Message>& messages, MessageType type) {
+static std::vector<Message> of_type(const std::vector<Message>& messages, MessageType type) {
     std::vector<Message> matching;
     std::ranges::copy_if(messages, std::back_inserter(matching), [type](const Message& message) {
         return message.type == type;
@@ -90,6 +92,7 @@ std::vector<Message> of_type(const std::vector<Message>& messages, MessageType t
     return matching;
 }
 
+namespace {
 class Session {
 public:
     static constexpr uint32_t loop_time_us{125};
@@ -126,8 +129,8 @@ public:
 
             if (this->application.push(byte)) {
                 messages.push_back(
-                    {this->application.type(),
-                     Bytes(this->application.payload().begin(), this->application.payload().end())}
+                    {.type = this->application.type(),
+                     .payload = Bytes(this->application.payload().begin(), this->application.payload().end())}
                 );
             }
         }
@@ -150,7 +153,14 @@ public:
         this->link.register_variables(probe, "link/");
 
         std::array<uint8_t, sizeof(uint32_t)> buffer{};
-        probe.read(probe.find("link/dropped_samples").value(), buffer);
+        const auto                            id = probe.find("link/dropped_samples");
+
+        if (not id.has_value()) {
+            FAIL_CHECK("the link registers no dropped samples counter");
+            return 0;
+        }
+
+        probe.read(*id, buffer);
         return Reader{buffer}.u32();
     }
 

@@ -3,6 +3,8 @@
  */
 
 #include <cstdint>
+#include <iterator>
+#include <utility>
 #include <vector>
 
 #include <doctest/doctest.h>
@@ -10,7 +12,6 @@
 #include "host_fixture.hpp"
 #include "micras/core/serializable.hpp"
 #include "micras/core/variable_pool.hpp"
-#include "micras/hal/flash.hpp"
 #include "micras/hal/host/board.hpp"
 #include "micras/proxy/storage.hpp"
 

@@ -9,11 +9,14 @@
 #include <format>
 #include <span>
 
+#include <sys/types.h>
 #include <unistd.h>
 
+#include "micras/hal/gpio.hpp"
 #include "micras/hal/host/board.hpp"
 #include "micras/hal/host/clock.hpp"
 #include "micras/hal/mcu.hpp"
+#include "micras/hal/pwm.hpp"
 #include "micras/hal/timer.hpp"
 
 namespace micras::hal {

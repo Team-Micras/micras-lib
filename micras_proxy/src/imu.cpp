@@ -4,7 +4,6 @@
 
 #include <array>
 #include <atomic>
-#include <cmath>
 #include <cstdint>
 
 #include "lsm6dsv_reg.h"

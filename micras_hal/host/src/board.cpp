@@ -2,16 +2,20 @@
  * @file
  */
 
-#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <format>
 #include <limits>
 #include <map>
+#include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
+#include "micras/hal/host/spi_device.hpp"
 
 namespace micras::hal::host {
 namespace {
@@ -42,13 +46,14 @@ struct Registry {
     FlashPort flash{{.name = "flash", .touched = false, .bound = false}, {}, std::numeric_limits<uint32_t>::max()};
     McuPort   mcu{{.name = "mcu", .touched = false, .bound = false}, 0, 0, 0, 0};
 };
+}  // namespace
 
 /**
  * @brief Get the registry.
  *
  * @return The process-wide registry.
  */
-Registry& registry() {
+static Registry& registry() {
     static Registry instance;
     return instance;
 }
@@ -59,7 +64,7 @@ Registry& registry() {
  * @param handle Peripheral handle.
  * @return Its name.
  */
-std::string handle_name(const void* handle) {
+static std::string handle_name(const void* handle) {
     const auto found = registry().handle_names.find(handle);
     return found != registry().handle_names.end() ? found->second :
                                                     std::format("handle@{:#x}", std::bit_cast<uintptr_t>(handle));
@@ -71,7 +76,7 @@ std::string handle_name(const void* handle) {
  * @param key GPIO port and pin mask.
  * @return Its name.
  */
-std::string gpio_name(const Key& key) {
+static std::string gpio_name(const Key& key) {
     const auto found = registry().gpio_names.find(key);
     return found != registry().gpio_names.end() ? found->second :
                                                   std::format("{} pin {:#06x}", handle_name(key.first), key.second);
@@ -86,7 +91,7 @@ std::string gpio_name(const Key& key) {
  * @return The port.
  */
 template <typename Map, typename Namer>
-typename Map::mapped_type& find_or_create(Map& ports, const typename Map::key_type& key, const Namer& name) {
+static Map::mapped_type& find_or_create(Map& ports, const typename Map::key_type& key, const Namer& name) {
     const auto [found, created] = ports.try_emplace(key);
 
     if (created) {
@@ -95,7 +100,6 @@ typename Map::mapped_type& find_or_create(Map& ports, const typename Map::key_ty
 
     return found->second;
 }
-}  // namespace
 
 GpioPort& Board::gpio(const void* port, uint16_t pin) {
     const Key key{port, pin};

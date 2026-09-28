@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <numbers>
 #include <vector>
@@ -11,11 +12,14 @@
 #include <doctest/doctest.h>
 
 #include "maze_reader.hpp"
+#include "micras/nav/grid_pose.hpp"
 #include "micras/nav/lattice.hpp"
+#include "micras/nav/motion_limits.hpp"
 #include "micras/nav/planner.hpp"
 #include "micras/nav/route_compiler.hpp"
 #include "micras/nav/segment.hpp"
 #include "micras/nav/state.hpp"
+#include "micras/nav/turn_table.hpp"
 #include "reference_robot.hpp"
 
 namespace micras::test {
@@ -23,8 +27,9 @@ namespace {
 constexpr float tolerance{1e-3F};
 
 const nav::LatticePose first_node{.point = {.x = 1, .y = 2}, .heading = 2};
+}  // namespace
 
-nav::Pose end_of(const nav::Segment& segment, const nav::RunProfile& profile) {
+static nav::Pose end_of(const nav::Segment& segment, const nav::RunProfile& profile) {
     if (segment.kind == nav::SegmentKind::STRAIGHT) {
         return segment.start.compose({.position = {.x = segment.length, .y = 0.0F}, .orientation = 0.0F});
     }
@@ -36,19 +41,18 @@ nav::Pose end_of(const nav::Segment& segment, const nav::RunProfile& profile) {
     return segment.start.compose({.position = {.x = end.x, .y = side * end.y}, .orientation = side * end.heading});
 }
 
-bool same_pose(const nav::Pose& first, const nav::Pose& second) {
+static bool same_pose(const nav::Pose& first, const nav::Pose& second) {
     const float heading = std::remainder(first.orientation - second.orientation, 2.0F * std::numbers::pi_v<float>);
 
     return std::abs(first.position.x - second.position.x) < tolerance and
            std::abs(first.position.y - second.position.y) < tolerance and std::abs(heading) < tolerance;
 }
 
-std::vector<nav::Segment> compile(const nav::Route& route) {
+static std::vector<nav::Segment> compile(const nav::Route& route) {
     std::vector<nav::Segment> segments;
     nav::RouteCompiler::compile(route, reference_dynamics(), fast_profile, start_distance, segments);
     return segments;
 }
-}  // namespace
 
 TEST_SUITE("route_compiler") {
     TEST_CASE("drives a straight route as one straight from the start pose") {
@@ -65,7 +69,10 @@ TEST_SUITE("route_compiler") {
 
         REQUIRE(segments.size() == 1);
         CHECK(segments.front().kind == nav::SegmentKind::STRAIGHT);
-        CHECK(segments.front().length == doctest::Approx(start_distance + 3 * cell_size + 0.09F));
+        CHECK(
+            static_cast<double>(segments.front().length) ==
+            doctest::Approx(static_cast<double>(start_distance + 3 * cell_size + 0.09F))
+        );
         CHECK(same_pose(
             segments.front().start, {.position = {.x = cell_size / 2.0F, .y = cell_size - start_distance},
                                      .orientation = std::numbers::pi_v<float> / 2.0F}
@@ -91,9 +98,15 @@ TEST_SUITE("route_compiler") {
         CHECK(segments.at(0).kind == nav::SegmentKind::STRAIGHT);
         CHECK(segments.at(1).kind == nav::SegmentKind::TURN);
         CHECK(segments.at(2).kind == nav::SegmentKind::STRAIGHT);
-        CHECK(segments.at(0).length == doctest::Approx(start_distance + cell_size + shape.pre));
-        CHECK(segments.at(1).length == doctest::Approx(-shape.length()));
-        CHECK(segments.at(2).length == doctest::Approx(shape.post + 2 * cell_size + 0.09F));
+        CHECK(
+            static_cast<double>(segments.at(0).length) ==
+            doctest::Approx(static_cast<double>(start_distance + cell_size + shape.pre))
+        );
+        CHECK(static_cast<double>(segments.at(1).length) == doctest::Approx(static_cast<double>(-shape.length())));
+        CHECK(
+            static_cast<double>(segments.at(2).length) ==
+            doctest::Approx(static_cast<double>(shape.post + 2 * cell_size + 0.09F))
+        );
         CHECK(same_pose(end_of(segments.at(0), fast_profile), segments.at(1).start));
         CHECK(same_pose(end_of(segments.at(1), fast_profile), segments.at(2).start));
         CHECK(same_pose(

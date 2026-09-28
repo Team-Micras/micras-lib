@@ -9,11 +9,14 @@
 
 #include <doctest/doctest.h>
 
+#include "crc.h"
 #include "host_fixture.hpp"
 #include "micras/hal/crc.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/spi_device.hpp"
 #include "micras/models/as5047u_model.hpp"
 #include "micras/proxy/rotary_sensor.hpp"
+#include "spi.h"
 
 namespace micras::test {
 namespace {
@@ -35,33 +38,35 @@ const proxy::RotarySensor::Registers registers{
     .settings3 = {{.UVWPP = 0, .HYS = 0, .ABIRES = 0b100}},
     .ecc = {{.ECC_chsum = 0, .ECC_en = 0}},
 };
+}  // namespace
 
-const proxy::RotarySensor::Config rotary_sensor_config{
-    .spi =
-        {
-            .init_function = MX_SPI3_Init,
-            .handle = &hspi3,
-            .cs_gpio = spi_config.cs_gpio,
-            .timeout = 2,
-            .clock_polarity = SPI_POLARITY_LOW,
-            .clock_phase = SPI_PHASE_2EDGE,
-        },
-    .encoder = encoder_config,
-    .crc = crc_config,
-    .registers = registers,
-};
+static proxy::RotarySensor::Config rotary_sensor_config() {
+    return {
+        .spi =
+            {
+                .init_function = MX_SPI3_Init,
+                .handle = &hspi3,
+                .cs_gpio = spi_config.cs_gpio,
+                .timeout = 2,
+                .clock_polarity = SPI_POLARITY_LOW,
+                .clock_phase = SPI_PHASE_2EDGE,
+            },
+        .encoder = encoder_config,
+        .crc = crc_config,
+        .registers = registers,
+    };
+}
 
-void attach(const proxy::RotarySensor::Config& config, hal::host::SpiDevice& device) {
+static void attach(const proxy::RotarySensor::Config& config, hal::host::SpiDevice& device) {
     hal::host::Board::spi_device(config.spi.handle, config.spi.cs_gpio.port, config.spi.cs_gpio.pin, device);
 }
-}  // namespace
 
 TEST_SUITE("rotary_sensor") {
     TEST_CASE_FIXTURE(HostBoard, "sets the chip up and reads its resolution back") {
         models::As5047uModel chip;
-        attach(rotary_sensor_config, chip);
+        attach(rotary_sensor_config(), chip);
 
-        const proxy::RotarySensor sensor{rotary_sensor_config};
+        const proxy::RotarySensor sensor{rotary_sensor_config()};
 
         CHECK(sensor.was_initialized());
         CHECK(sensor.get_resolution() == 16384);
@@ -72,18 +77,21 @@ TEST_SUITE("rotary_sensor") {
 
     TEST_CASE_FIXTURE(HostBoard, "reads the position the encoder counted") {
         models::As5047uModel chip;
-        attach(rotary_sensor_config, chip);
-        const proxy::RotarySensor sensor{rotary_sensor_config};
+        attach(rotary_sensor_config(), chip);
+        const proxy::RotarySensor sensor{rotary_sensor_config()};
 
-        hal::host::Board::encoder(rotary_sensor_config.encoder.handle).count = 4096;
+        hal::host::Board::encoder(rotary_sensor_config().encoder.handle).count = 4096;
 
-        CHECK(sensor.get_position() == doctest::Approx(std::numbers::pi_v<float> / 2.0F));
+        CHECK(
+            static_cast<double>(sensor.get_position()) ==
+            doctest::Approx(static_cast<double>(std::numbers::pi_v<float> / 2.0F))
+        );
     }
 
     TEST_CASE_FIXTURE(HostBoard, "fails when the chip rejects the frames for their CRC") {
         CRC_HandleTypeDef wrong_crc = hcrc;
         wrong_crc.Init.InitValue = 0x00;
-        proxy::RotarySensor::Config config = rotary_sensor_config;
+        proxy::RotarySensor::Config config = rotary_sensor_config();
         config.crc.handle = &wrong_crc;
         models::As5047uModel chip;
         attach(config, chip);

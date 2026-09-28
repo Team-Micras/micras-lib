@@ -10,6 +10,7 @@
 #include "host_fixture.hpp"
 #include "micras/hal/gpio.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::test {
 TEST_SUITE("board") {

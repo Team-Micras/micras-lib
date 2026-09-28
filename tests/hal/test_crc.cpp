@@ -14,8 +14,7 @@
 #include "micras/hal/crc.hpp"
 
 namespace micras::test {
-namespace {
-uint8_t reference_crc8(std::span<const uint8_t> data, uint8_t polynomial, uint8_t initial) {
+static uint8_t reference_crc8(std::span<const uint8_t> data, uint8_t polynomial, uint8_t initial) {
     uint8_t crc = initial;
 
     for (const uint8_t byte : data) {
@@ -28,7 +27,6 @@ uint8_t reference_crc8(std::span<const uint8_t> data, uint8_t polynomial, uint8_
 
     return crc;
 }
-}  // namespace
 
 TEST_SUITE("crc") {
     TEST_CASE_FIXTURE(HostBoard, "computes the check value of CRC-8/SAE-J1850") {

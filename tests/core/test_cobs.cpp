@@ -2,7 +2,6 @@
  * @file
  */
 
-#include <cstddef>
 #include <cstdint>
 #include <random>
 #include <vector>
@@ -14,20 +13,21 @@
 namespace micras::core {
 namespace {
 using Bytes = std::vector<uint8_t>;
+}  // namespace
 
-Bytes encode(const Bytes& raw) {
+static Bytes encode(const Bytes& raw) {
     Bytes encoded(cobs_encoded_size(raw.size()));
     encoded.resize(cobs_encode(raw, encoded));
     return encoded;
 }
 
-Bytes decode(const Bytes& encoded) {
+static Bytes decode(const Bytes& encoded) {
     Bytes decoded(encoded.size() + 1);
     decoded.resize(cobs_decode(encoded, decoded));
     return decoded;
 }
 
-Bytes count(int first, int last) {
+static Bytes count(int first, int last) {
     Bytes bytes;
 
     for (int value = first; value <= last; value++) {
@@ -37,13 +37,13 @@ Bytes count(int first, int last) {
     return bytes;
 }
 
-Bytes join(const Bytes& head, const Bytes& tail) {
+static Bytes join(const Bytes& head, const Bytes& tail) {
     Bytes joined = head;
     joined.insert(joined.end(), tail.begin(), tail.end());
     return joined;
 }
 
-void check_vector(const Bytes& raw, const Bytes& expected) {
+static void check_vector(const Bytes& raw, const Bytes& expected) {
     CAPTURE(raw.size());
 
     const Bytes encoded = encode(raw);
@@ -51,7 +51,6 @@ void check_vector(const Bytes& raw, const Bytes& expected) {
     CHECK(encoded == expected);
     CHECK(decode(encoded) == raw);
 }
-}  // namespace
 
 TEST_SUITE("cobs") {
     TEST_CASE("encodes the reference vectors and decodes them back") {
@@ -70,6 +69,7 @@ TEST_SUITE("cobs") {
     }
 
     TEST_CASE("round trips random frames without a delimiter in the encoding") {
+        // NOLINTNEXTLINE(bugprone-random-generator-seed) a fixed seed keeps the test reproducible
         std::mt19937 generator{7};
 
         for (int trial = 0; trial < 200000; trial++) {

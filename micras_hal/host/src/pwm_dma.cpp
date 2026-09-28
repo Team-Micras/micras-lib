@@ -7,10 +7,10 @@
 
 #include "micras/hal/host/board.hpp"
 #include "micras/hal/host/clock.hpp"
+#include "micras/hal/host/ports.hpp"
 #include "micras/hal/pwm_dma.hpp"
 
 namespace micras::hal {
-namespace {
 /**
  * @brief Start a transfer of compare values.
  *
@@ -19,7 +19,7 @@ namespace {
  * @param compares Values the DMA feeds the compare register with.
  */
 template <typename T>
-void start(TIM_HandleTypeDef* handle, uint32_t channel, std::span<const T> compares) {
+static void start(TIM_HandleTypeDef* handle, uint32_t channel, std::span<const T> compares) {
     host::PwmDmaPort& port = host::Board::pwm_dma(handle, channel);
     port.touched = true;
     port.compares.assign(compares.begin(), compares.end());
@@ -32,7 +32,6 @@ void start(TIM_HandleTypeDef* handle, uint32_t channel, std::span<const T> compa
 
     port.transfer_end = host::Clock::instance().now() + compares.size() * port.period * cycles_per_count;
 }
-}  // namespace
 
 PwmDma::PwmDma(const Config& config) : handle{config.handle}, channel{config.timer_channel} {
     if (this->handle->State == HAL_TIM_STATE_RESET) {

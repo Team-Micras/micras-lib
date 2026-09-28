@@ -16,6 +16,7 @@
 namespace micras::nav {
 template <typename F>
 void CurveSpeed::plan(
+    // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward) called once per sample, so never forwarded
     F&& bending, std::span<float> speeds, float spacing, float start_speed, float end_speed, const CurveLimits& limits
 ) {
     if (speeds.empty()) {
@@ -23,6 +24,8 @@ void CurveSpeed::plan(
     }
 
     const std::size_t last = speeds.size() - 1;
+
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) every index is at most last
 
     Bending before = bending(0);
 
@@ -46,6 +49,7 @@ void CurveSpeed::plan(
         const float   deceleration = limits.get_deceleration(speeds[i], at);
         speeds[i - 1] = std::min(speeds[i - 1], std::sqrt(speeds[i] * speeds[i] + 2.0F * spacing * deceleration));
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 }
 }  // namespace micras::nav
 

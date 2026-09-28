@@ -5,11 +5,13 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <numbers>
 #include <span>
 #include <utility>
 
+#include "micras/hal/host/spi_device.hpp"
 #include "micras/models/lsm6dsv_model.hpp"
 
 namespace micras::models {
@@ -113,6 +115,7 @@ constexpr double mg_to_mps2{0.00980665};
  * @brief Rate of ODR code 3 for each high accuracy set of HAODR_CFG, in hertz; each code above doubles it.
  */
 constexpr std::array<double, 4> base_rates{15.0, 15.625, 12.5, 15.0};
+}  // namespace
 
 /**
  * @brief Check whether the SPI interface can write a register.
@@ -120,12 +123,11 @@ constexpr std::array<double, 4> base_rates{15.0, 15.625, 12.5, 15.0};
  * @param address Register address.
  * @return True for a read-write register.
  */
-bool writable(uint8_t address) {
+static bool writable(uint8_t address) {
     return std::ranges::any_of(writable_ranges, [address](const auto& range) {
         return address >= range.first and address <= range.second;
     });
 }
-}  // namespace
 
 Lsm6dsvModel::Lsm6dsvModel() : SpiDevice{Mode::MODE_3} {
     this->reset();
@@ -139,6 +141,7 @@ void Lsm6dsvModel::select() {
 void Lsm6dsvModel::exchange(std::span<const uint8_t> transmitted, std::span<uint8_t> received) {
     const std::size_t size = std::min(transmitted.size(), received.size());
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) below the size of both spans
     for (std::size_t index = 0; index < size; index++) {
         received[index] = 0;
 
@@ -163,6 +166,7 @@ void Lsm6dsvModel::exchange(std::span<const uint8_t> transmitted, std::span<uint
             this->address = (this->address + 1) & address_mask;
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 }
 
 void Lsm6dsvModel::deselect() {

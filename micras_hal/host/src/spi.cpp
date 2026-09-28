@@ -4,13 +4,16 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <span>
 #include <vector>
 
+#include "micras/hal/gpio.hpp"
 #include "micras/hal/host/board.hpp"
 #include "micras/hal/host/clock.hpp"
+#include "micras/hal/host/ports.hpp"
 #include "micras/hal/host/spi_device.hpp"
 #include "micras/hal/spi.hpp"
 #include "micras/hal/timer.hpp"
@@ -31,13 +34,14 @@ struct HostState {
      */
     uint64_t transfer_end{0};
 };
+}  // namespace
 
 /**
  * @brief Get the host state of every Spi alive.
  *
  * @return The states, keyed by the object.
  */
-std::map<const Spi*, HostState>& host_states() {
+static std::map<const Spi*, HostState>& host_states() {
     static std::map<const Spi*, HostState> states;
     return states;
 }
@@ -49,7 +53,7 @@ std::map<const Spi*, HostState>& host_states() {
  * @param handle Its handle.
  * @return The port.
  */
-host::SpiPort& port_of(const Spi* spi, const SPI_HandleTypeDef* handle) {
+static host::SpiPort& port_of(const Spi* spi, const SPI_HandleTypeDef* handle) {
     const Gpio::Config& cs = host_states().at(spi).cs;
     return host::Board::spi(handle, cs.port, cs.pin);
 }
@@ -60,7 +64,7 @@ host::SpiPort& port_of(const Spi* spi, const SPI_HandleTypeDef* handle) {
  * @param handle Handle of the bus.
  * @return The mode.
  */
-host::SpiDevice::Mode mode_of(const SPI_HandleTypeDef& handle) {
+static host::SpiDevice::Mode mode_of(const SPI_HandleTypeDef& handle) {
     const bool polarity = handle.Init.CLKPolarity == SPI_POLARITY_HIGH;
     const bool phase = handle.Init.CLKPhase == SPI_PHASE_2EDGE;
     return static_cast<host::SpiDevice::Mode>((polarity ? 2 : 0) + (phase ? 1 : 0));
@@ -74,7 +78,7 @@ host::SpiDevice::Mode mode_of(const SPI_HandleTypeDef& handle) {
  * @param transmitted Bytes sent.
  * @param received Bytes answered, as many as were sent; all ones when no device drives the bus in its mode.
  */
-void exchange(
+static void exchange(
     const SPI_HandleTypeDef& handle, host::SpiPort& port, std::span<const uint8_t> transmitted,
     std::span<uint8_t> received
 ) {
@@ -93,7 +97,7 @@ void exchange(
  * @param bytes Bytes transferred.
  * @return Host clock cycles, zero when the bus has no clock to time it by.
  */
-uint64_t transfer_cycles(const SPI_HandleTypeDef& handle, std::size_t bytes) {
+static uint64_t transfer_cycles(const SPI_HandleTypeDef& handle, std::size_t bytes) {
     if (handle.Instance == nullptr or handle.Instance->kernel_clock == 0) {
         return 0;
     }
@@ -104,7 +108,6 @@ uint64_t transfer_cycles(const SPI_HandleTypeDef& handle, std::size_t bytes) {
 
     return ((bytes * 8 * divider * cycles_per_second) + kernel_clock - 1) / kernel_clock;
 }
-}  // namespace
 
 std::array<Spi*, Spi::max_transfers> Spi::transferring{};
 

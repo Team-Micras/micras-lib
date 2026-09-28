@@ -7,6 +7,7 @@
 
 #include "micras/hal/fmac.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::hal {
 Fmac::Fmac(const Config& config) : handle{config.handle} {
@@ -26,13 +27,15 @@ bool Fmac::configure_iir(std::span<const int16_t> feed_forward, std::span<const 
     host::FmacPort& port = host::Board::fmac(this->handle);
     port.touched = true;
     port.configure(feed_forward, feedback);
+    this->output_buffer_size = static_cast<uint16_t>(this->output_buffer.size());
 
     this->initialized = true;
     return true;
 }
 
 int16_t Fmac::update(int16_t sample) {
-    return host::Board::fmac(this->handle).filter(sample);
+    this->output_buffer.front() = host::Board::fmac(this->handle).filter(sample);
+    return this->output_buffer.front();
 }
 
 bool Fmac::was_initialized() const {

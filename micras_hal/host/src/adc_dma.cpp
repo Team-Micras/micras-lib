@@ -9,6 +9,7 @@
 
 #include "micras/hal/adc_dma.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::hal {
 std::array<AdcDma*, AdcDma::max_instances> AdcDma::instances{};

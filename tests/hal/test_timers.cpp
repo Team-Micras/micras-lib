@@ -10,8 +10,10 @@
 #include "host_fixture.hpp"
 #include "micras/hal/encoder.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 #include "micras/hal/pwm.hpp"
 #include "micras/hal/pwm_dma.hpp"
+#include "tim.h"
 
 namespace micras::test {
 TEST_SUITE("timers") {
@@ -19,8 +21,11 @@ TEST_SUITE("timers") {
         const hal::Pwm pwm{pwm_config};
 
         CHECK(pwm.was_initialized());
-        CHECK(pwm.get_frequency() == doctest::Approx(1000.0F));
-        CHECK(hal::host::Board::pwm(pwm_config.handle, pwm_config.timer_channel).frequency == doctest::Approx(1000.0F));
+        CHECK(static_cast<double>(pwm.get_frequency()) == doctest::Approx(1000.0));
+        CHECK(
+            static_cast<double>(hal::host::Board::pwm(pwm_config.handle, pwm_config.timer_channel).frequency) ==
+            doctest::Approx(1000.0)
+        );
     }
 
     TEST_CASE_FIXTURE(HostBoard, "reports the duty cycle the compare register gives") {
@@ -28,14 +33,14 @@ TEST_SUITE("timers") {
         const hal::host::PwmPort& port = hal::host::Board::pwm(pwm_config.handle, pwm_config.timer_channel);
 
         pwm.set_duty_cycle(25.0F);
-        CHECK(port.duty_cycle == doctest::Approx(25.0F));
+        CHECK(static_cast<double>(port.duty_cycle) == doctest::Approx(25.0));
         CHECK(port.touched);
 
         pwm.set_duty_cycle(150.0F);
-        CHECK(port.duty_cycle == doctest::Approx(100.0F));
+        CHECK(static_cast<double>(port.duty_cycle) == doctest::Approx(100.0));
 
         pwm.set_duty_cycle(-10.0F);
-        CHECK(port.duty_cycle == doctest::Approx(0.0F));
+        CHECK(static_cast<double>(port.duty_cycle) == doctest::Approx(0.0));
     }
 
     TEST_CASE_FIXTURE(HostBoard, "reports the active fraction of an inverted channel") {
@@ -45,7 +50,10 @@ TEST_SUITE("timers") {
 
         pwm.set_duty_cycle(30.0F);
 
-        CHECK(hal::host::Board::pwm(config.handle, config.timer_channel).duty_cycle == doctest::Approx(30.0F));
+        CHECK(
+            static_cast<double>(hal::host::Board::pwm(config.handle, config.timer_channel).duty_cycle) ==
+            doctest::Approx(30.0)
+        );
         CHECK((htim15.Instance->CCER & TIM_CCER_CC1P) != 0);
     }
 
@@ -55,8 +63,11 @@ TEST_SUITE("timers") {
         pwm.set_frequency(2000);
 
         CHECK(htim15.Instance->ARR == 499);
-        CHECK(pwm.get_frequency() == doctest::Approx(2000.0F));
-        CHECK(hal::host::Board::pwm(pwm_config.handle, pwm_config.timer_channel).frequency == doctest::Approx(2000.0F));
+        CHECK(static_cast<double>(pwm.get_frequency()) == doctest::Approx(2000.0));
+        CHECK(
+            static_cast<double>(hal::host::Board::pwm(pwm_config.handle, pwm_config.timer_channel).frequency) ==
+            doctest::Approx(2000.0)
+        );
     }
 
     TEST_CASE_FIXTURE(HostBoard, "keeps a DMA transfer of compare values busy for one period per value") {

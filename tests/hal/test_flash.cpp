@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
@@ -16,11 +17,11 @@
 namespace micras::test {
 namespace {
 constexpr std::array<uint8_t, 5> data{1, 2, 3, 4, 5};
+}  // namespace
 
-bool is_erased(std::span<const uint8_t> bytes) {
+static bool is_erased(std::span<const uint8_t> bytes) {
     return std::ranges::all_of(bytes, [](uint8_t byte) { return byte == hal::FlashWord::erased_value; });
 }
-}  // namespace
 
 TEST_SUITE("flash") {
     TEST_CASE_FIXTURE(HostBoard, "reserves the upper half of the sectors") {
@@ -58,7 +59,7 @@ TEST_SUITE("flash") {
     }
 
     TEST_CASE_FIXTURE(HostBoard, "stops a write where the simulated power loss cuts it off") {
-        std::array<uint8_t, 3 * hal::FlashWord::size> long_data{};
+        std::array<uint8_t, static_cast<std::size_t>(3 * hal::FlashWord::size)> long_data{};
         long_data.fill(0x42);
         hal::host::Board::flash().write_budget = 2;
 

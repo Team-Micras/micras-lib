@@ -4,9 +4,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
+#include "micras/hal/host/spi_device.hpp"
 #include "micras/models/as5047u_model.hpp"
 
 namespace micras::models {
@@ -51,6 +53,7 @@ void As5047uModel::select() {
 void As5047uModel::exchange(std::span<const uint8_t> transmitted, std::span<uint8_t> received) {
     const std::size_t size = std::min(transmitted.size(), received.size());
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) below the size of both spans
     for (std::size_t index = 0; index < size; index++) {
         const uint32_t shift = 8U * static_cast<uint32_t>(frame_size - 1 - this->received_bytes);
         received[index] = static_cast<uint8_t>(this->answer >> shift);
@@ -62,6 +65,7 @@ void As5047uModel::exchange(std::span<const uint8_t> transmitted, std::span<uint
             this->process(this->frame);
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 }
 
 void As5047uModel::deselect() {

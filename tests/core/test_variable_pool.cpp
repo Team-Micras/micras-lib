@@ -6,6 +6,7 @@
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <span>
 #include <vector>
 
@@ -32,11 +33,11 @@ enum class Profile : uint8_t {
     A,
     B
 };
+}  // namespace
 
-std::span<const uint8_t> bytes_of(const float& value) {
+static std::span<const uint8_t> bytes_of(const float& value) {
     return {std::bit_cast<const uint8_t*>(&value), sizeof(value)};
 }
-}  // namespace
 
 TEST_SUITE("variable_pool") {
     TEST_CASE("registers finds reads and writes variables with their access") {

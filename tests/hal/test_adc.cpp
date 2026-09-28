@@ -10,6 +10,7 @@
 #include "host_fixture.hpp"
 #include "micras/hal/adc_dma.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::test {
 TEST_SUITE("adc") {
@@ -35,7 +36,7 @@ TEST_SUITE("adc") {
         CHECK(adc.read_snapshot(read) == 1);
         CHECK(read == std::array<uint16_t, 2>{1500, 900});
         CHECK(adc.get_max_reading() == 4095);
-        CHECK(adc.get_reference_voltage() == doctest::Approx(3.3F));
+        CHECK(static_cast<double>(adc.get_reference_voltage()) == doctest::Approx(3.3));
     }
 
     TEST_CASE_FIXTURE(HostBoard, "stops updating after an error until it recovers") {

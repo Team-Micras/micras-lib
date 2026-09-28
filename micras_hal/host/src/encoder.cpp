@@ -6,9 +6,10 @@
 
 #include "micras/hal/encoder.hpp"
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 
 namespace micras::hal {
-Encoder::Encoder(const Config& config) : handle{config.handle}, start_count{0} {
+Encoder::Encoder(const Config& config) : handle{config.handle} {
     if (this->handle->State == HAL_TIM_STATE_RESET) {
         config.init_function();
     }

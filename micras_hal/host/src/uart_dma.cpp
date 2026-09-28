@@ -9,6 +9,7 @@
 #include <span>
 
 #include "micras/hal/host/board.hpp"
+#include "micras/hal/host/ports.hpp"
 #include "micras/hal/uart_dma.hpp"
 
 namespace micras::hal {

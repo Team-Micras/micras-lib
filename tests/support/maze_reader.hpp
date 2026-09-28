@@ -91,15 +91,24 @@ inline MazeText read_maze(const std::filesystem::path& path) {
             const std::size_t    column = 4 * static_cast<std::size_t>(x);
             const nav::GridPoint cell{.x = x, .y = y};
 
-            maze.walls.emplace_back(nav::GridPose{cell, nav::Side::RIGHT}, character(row, column + 4) == '|');
-            maze.walls.emplace_back(nav::GridPose{cell, nav::Side::UP}, character(row - 1, column + 2) == '-');
+            maze.walls.emplace_back(
+                nav::GridPose{.position = cell, .orientation = nav::Side::RIGHT}, character(row, column + 4) == '|'
+            );
+            maze.walls.emplace_back(
+                nav::GridPose{.position = cell, .orientation = nav::Side::UP}, character(row - 1, column + 2) == '-'
+            );
 
             if (x == 0) {
-                maze.walls.emplace_back(nav::GridPose{cell, nav::Side::LEFT}, character(row, column) == '|');
+                maze.walls.emplace_back(
+                    nav::GridPose{.position = cell, .orientation = nav::Side::LEFT}, character(row, column) == '|'
+                );
             }
 
             if (y == 0) {
-                maze.walls.emplace_back(nav::GridPose{cell, nav::Side::DOWN}, character(row + 1, column + 2) == '-');
+                maze.walls.emplace_back(
+                    nav::GridPose{.position = cell, .orientation = nav::Side::DOWN},
+                    character(row + 1, column + 2) == '-'
+                );
             }
 
             const char mark = character(row, column + 2);

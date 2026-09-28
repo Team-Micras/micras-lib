@@ -20,8 +20,9 @@ constexpr double q15_scale{32768.0};
 constexpr std::array<int16_t, 3> feed_forward{2048, 4096, 2048};
 
 constexpr std::array<int16_t, 2> feedback{29491, -13107};
+}  // namespace
 
-std::vector<double> direct_form(const std::vector<double>& inputs) {
+static std::vector<double> direct_form(const std::vector<double>& inputs) {
     std::vector<double>   outputs;
     std::array<double, 3> input_history{};
     std::array<double, 2> output_history{};
@@ -45,7 +46,6 @@ std::vector<double> direct_form(const std::vector<double>& inputs) {
 
     return outputs;
 }
-}  // namespace
 
 TEST_SUITE("fmac") {
     TEST_CASE_FIXTURE(HostBoard, "runs the configured filter as a direct form reference does") {
@@ -55,6 +55,7 @@ TEST_SUITE("fmac") {
 
         std::vector<double> inputs;
 
+        inputs.reserve(200);
         for (int sample = 0; sample < 200; sample++) {
             inputs.push_back(0.5 * std::sin(0.1 * sample) + (sample > 100 ? 0.25 : 0.0));
         }

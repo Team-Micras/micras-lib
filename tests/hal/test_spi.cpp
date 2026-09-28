@@ -2,8 +2,8 @@
  * @file
  */
 
+#include <algorithm>
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -14,6 +14,7 @@
 #include "host_fixture.hpp"
 #include "micras/hal/host/board.hpp"
 #include "micras/hal/host/clock.hpp"
+#include "micras/hal/host/ports.hpp"
 #include "micras/hal/host/spi_device.hpp"
 #include "micras/hal/spi.hpp"
 #include "micras/hal/timer.hpp"
@@ -32,10 +33,10 @@ public:
     void exchange(std::span<const uint8_t> transmitted, std::span<uint8_t> received) override {
         this->log.push_back("exchange " + std::to_string(transmitted.size()));
 
-        for (std::size_t index = 0; index < transmitted.size(); index++) {
-            this->received_bytes.push_back(transmitted[index]);
-            received[index] = static_cast<uint8_t>(transmitted[index] + this->offset);
-        }
+        this->received_bytes.insert(this->received_bytes.end(), transmitted.begin(), transmitted.end());
+        std::ranges::transform(transmitted, received.begin(), [this](uint8_t byte) {
+            return static_cast<uint8_t>(byte + this->offset);
+        });
     }
 
     void deselect() override { this->log.emplace_back("deselect"); }
@@ -49,12 +50,13 @@ private:
     std::vector<std::string> log;
     std::vector<uint8_t>     received_bytes;
 };
+}  // namespace
 
-void attach(const hal::Spi::Config& config, SpiDevice& device) {
+static void attach(const hal::Spi::Config& config, SpiDevice& device) {
     Board::spi_device(config.handle, config.cs_gpio.port, config.cs_gpio.pin, device);
 }
 
-uint32_t wait_for_transfer(const hal::Spi& spi) {
+static uint32_t wait_for_transfer(const hal::Spi& spi) {
     const uint64_t start = hal::host::Clock::instance().now();
 
     while (spi.get_transfer() == hal::Spi::Transfer::RUNNING) {
@@ -63,7 +65,6 @@ uint32_t wait_for_transfer(const hal::Spi& spi) {
 
     return static_cast<uint32_t>((hal::host::Clock::instance().now() - start) / (SystemCoreClock / 1000000));
 }
-}  // namespace
 
 TEST_SUITE("spi") {
     TEST_CASE_FIXTURE(HostBoard, "routes each transfer to the device its chip select selects") {

@@ -11,6 +11,7 @@
 #include <doctest/doctest.h>
 
 #include "maze_reader.hpp"
+#include "micras/nav/motion_limits.hpp"
 #include "micras/nav/planner.hpp"
 #include "reference_robot.hpp"
 
@@ -44,7 +45,7 @@ TEST_SUITE("planner") {
                 read_maze(std::filesystem::path{MICRAS_LIB_TEST_MAZES} / (std::string{golden.maze} + ".txt"));
             const nav::Route route = plan_route(text, fast_profile);
 
-            CHECK(route.time == doctest::Approx(golden.time).epsilon(1e-6));
+            CHECK(static_cast<double>(route.time) == doctest::Approx(static_cast<double>(golden.time)).epsilon(1e-6));
             CHECK(route.steps.size() == golden.steps);
         }
     }

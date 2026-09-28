@@ -98,6 +98,7 @@ bool TMaze<width, height>::is_known_open(const GridPose& pose) const {
 
 template <uint8_t width, uint8_t height>
 bool TMaze<width, height>::is_goal(const GridPoint& position) const {
+    // NOLINTNEXTLINE(readability-use-anyofallof) the loop the robot's image was verified with
     for (const GridPoint& cell : this->goal) {
         if (cell == position) {
             return true;
@@ -220,6 +221,8 @@ template <uint8_t width, uint8_t height>
 void TMaze<width, height>::deserialize(const uint8_t* buffer, uint16_t size) {
     const std::span<const uint8_t> data{buffer, size};
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) the size is checked first
+
     if (size != header_size + walls_size or data[0] != format_version or data[1] != width or data[2] != height) {
         return;
     }
@@ -229,8 +232,7 @@ void TMaze<width, height>::deserialize(const uint8_t* buffer, uint16_t size) {
     for (uint8_t row = 0; row < height; row++) {
         for (uint8_t column = 0; column < width; column++) {
             const uint16_t index = row * width + column;
-            const uint8_t  packed =
-                (static_cast<uint32_t>(data[header_size + index / 2U]) >> (4U * (index % 2U))) & 0x0FU;
+            const uint8_t  packed = (data[header_size + index / 2U] >> (4U * (index % 2U))) & 0x0F;
 
             const std::array<std::pair<Side, uint8_t>, 2> sides{
                 {{Side::RIGHT, packed & 0x03U}, {Side::UP, packed >> 2U}}
@@ -246,6 +248,8 @@ void TMaze<width, height>::deserialize(const uint8_t* buffer, uint16_t size) {
             }
         }
     }
+
+    // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
     this->flood(this->goal);
 }

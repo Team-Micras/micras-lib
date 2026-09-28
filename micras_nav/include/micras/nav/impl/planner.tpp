@@ -197,6 +197,7 @@ void TPlanner<width, height>::get_route(uint8_t index, Route& route) const {
 
 template <uint8_t width, uint8_t height>
 template <typename F>
+// NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward) called for every wall, so never forwarded
 void TPlanner<width, height>::for_each_wall(const Route& route, F&& function) {
     LatticePose node = route.start;
     function(node.wall());
@@ -587,6 +588,7 @@ void TPlanner<width, height>::advance_expansion() {
 }
 
 template <uint8_t width, uint8_t height>
+// NOLINTNEXTLINE(readability-function-cognitive-complexity) one edge of the search, both sides at once
 void TPlanner<width, height>::relax_turn(uint16_t index, const LatticePose& entry, uint8_t run, TurnId turn) {
     const TurnPrimitive& primitive = get_primitive(turn);
 

@@ -3,20 +3,24 @@
  */
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <numbers>
+#include <utility>
 #include <vector>
 
 #include <doctest/doctest.h>
 
 #include "lsm6dsv_reg.h"
+#include "micras/hal/host/spi_device.hpp"
 #include "micras/models/lsm6dsv_model.hpp"
 
 namespace micras::models {
 namespace {
 constexpr uint8_t read_flag{0x80};
+}  // namespace
 
-std::vector<uint8_t> transact(Lsm6dsvModel& chip, std::vector<uint8_t> transmitted) {
+static std::vector<uint8_t> transact(Lsm6dsvModel& chip, std::vector<uint8_t> transmitted) {
     std::vector<uint8_t> received(transmitted.size());
     chip.select();
     chip.exchange(transmitted, received);
@@ -24,19 +28,19 @@ std::vector<uint8_t> transact(Lsm6dsvModel& chip, std::vector<uint8_t> transmitt
     return received;
 }
 
-void write(Lsm6dsvModel& chip, uint8_t address, uint8_t value) {
+static void write(Lsm6dsvModel& chip, uint8_t address, uint8_t value) {
     transact(chip, {address, value});
 }
 
-uint8_t read(Lsm6dsvModel& chip, uint8_t address) {
+static uint8_t read(Lsm6dsvModel& chip, uint8_t address) {
     return transact(chip, {static_cast<uint8_t>(address | read_flag), 0}).at(1);
 }
 
-int16_t word(const std::vector<uint8_t>& bytes, std::size_t low) {
+static int16_t word(const std::vector<uint8_t>& bytes, std::size_t low) {
     return static_cast<int16_t>(bytes.at(low) | (bytes.at(low + 1) << 8U));
 }
 
-void configure(Lsm6dsvModel& chip, uint8_t gyroscope_scale, uint8_t accelerometer_scale) {
+static void configure(Lsm6dsvModel& chip, uint8_t gyroscope_scale, uint8_t accelerometer_scale) {
     write(chip, LSM6DSV_HAODR_CFG, 0x01);
     write(chip, LSM6DSV_CTRL1, 0x1C);
     write(chip, LSM6DSV_CTRL2, 0x1C);
@@ -44,13 +48,11 @@ void configure(Lsm6dsvModel& chip, uint8_t gyroscope_scale, uint8_t acceleromete
     write(chip, LSM6DSV_CTRL8, accelerometer_scale);
 }
 
-std::vector<uint8_t> read_burst(Lsm6dsvModel& chip) {
+static std::vector<uint8_t> read_burst(Lsm6dsvModel& chip) {
     std::vector<uint8_t> command(17);
     command.at(0) = LSM6DSV_STATUS_REG | read_flag;
     return transact(chip, command);
 }
-
-}  // namespace
 
 TEST_SUITE("lsm6dsv_model") {
     TEST_CASE("answers in SPI mode 3") {

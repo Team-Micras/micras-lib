@@ -9,6 +9,7 @@
 #include "host_fixture.hpp"
 #include "micras/hal/host/board.hpp"
 #include "micras/hal/host/clock.hpp"
+#include "micras/hal/host/spi_device.hpp"
 #include "micras/models/lsm6dsv_model.hpp"
 #include "micras/proxy/imu.hpp"
 
@@ -25,15 +26,16 @@ const proxy::Imu::Config imu_config{
     .gyroscope_filter = LSM6DSV_GY_ULTRA_LIGHT,
     .accelerometer_filter = LSM6DSV_XL_MEDIUM,
 };
+}  // namespace
 
-void attach(const proxy::Imu::Config& config, hal::host::SpiDevice& device) {
+static void attach(const proxy::Imu::Config& config, hal::host::SpiDevice& device) {
     hal::host::Board::spi_device(config.spi.handle, config.spi.cs_gpio.port, config.spi.cs_gpio.pin, device);
 }
 
-bool near(double value, double expected, double tolerance) {
-    return value >= expected - tolerance and value <= expected + tolerance;
+static bool near(float value, double expected, double tolerance) {
+    const auto actual = static_cast<double>(value);
+    return actual >= expected - tolerance and actual <= expected + tolerance;
 }
-}  // namespace
 
 TEST_SUITE("imu") {
     TEST_CASE_FIXTURE(HostBoard, "sets the chip up as its configuration says") {

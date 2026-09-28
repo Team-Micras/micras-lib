@@ -19,8 +19,9 @@ const core::ButterworthFilter::Config filter_config{
     .cutoff_frequency = 200.0F,
     .sampling_frequency = 1000.0F,
 };
+}  // namespace
 
-std::vector<double> direct_form(const std::vector<double>& inputs) {
+static std::vector<double> direct_form(const std::vector<double>& inputs) {
     const core::ButterworthFilter::Coefficients coefficients =
         core::ButterworthFilter::compute_coefficients(filter_config);
     std::array<double, 3> input_history{};
@@ -46,7 +47,6 @@ std::vector<double> direct_form(const std::vector<double>& inputs) {
 
     return outputs;
 }
-}  // namespace
 
 TEST_SUITE("fmac_filter") {
     TEST_CASE_FIXTURE(HostBoard, "filters as the Butterworth filter it was designed as") {
@@ -55,6 +55,7 @@ TEST_SUITE("fmac_filter") {
 
         std::vector<double> inputs;
 
+        inputs.reserve(300);
         for (int sample = 0; sample < 300; sample++) {
             inputs.push_back((sample < 150 ? 0.5 : -0.25) + 0.1 * std::sin(0.9 * sample));
         }
@@ -63,10 +64,10 @@ TEST_SUITE("fmac_filter") {
 
         for (std::size_t sample = 0; sample < inputs.size(); sample++) {
             CAPTURE(sample);
-            const double output = filter.update(static_cast<float>(inputs.at(sample)));
+            const auto output = static_cast<double>(filter.update(static_cast<float>(inputs.at(sample))));
 
             CHECK(std::abs(output - expected.at(sample)) < 2e-3);
-            CHECK(filter.get_last() == static_cast<float>(output));
+            CHECK(static_cast<double>(filter.get_last()) == output);
         }
     }
 

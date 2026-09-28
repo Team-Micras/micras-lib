@@ -7,6 +7,7 @@
 
 #include <doctest/doctest.h>
 
+#include "micras/hal/host/spi_device.hpp"
 #include "micras/models/as5047u_model.hpp"
 
 namespace micras::models {
@@ -15,26 +16,27 @@ using Frame = std::array<uint8_t, As5047uModel::frame_size>;
 
 constexpr uint32_t read_flag{1U << 22U};
 constexpr uint32_t error_flag{1U << 22U};
+}  // namespace
 
-Frame frame_of(uint32_t upper) {
+static Frame frame_of(uint32_t upper) {
     const auto high = static_cast<uint8_t>(upper >> 16U);
     const auto low = static_cast<uint8_t>(upper >> 8U);
     return {high, low, As5047uModel::crc(high, low)};
 }
 
-Frame read_command(uint16_t address) {
+static Frame read_command(uint16_t address) {
     return frame_of(read_flag | static_cast<uint32_t>(address) << 8U);
 }
 
-Frame write_command(uint16_t address) {
+static Frame write_command(uint16_t address) {
     return frame_of(static_cast<uint32_t>(address) << 8U);
 }
 
-Frame data_frame(uint16_t data) {
+static Frame data_frame(uint16_t data) {
     return frame_of(static_cast<uint32_t>(data) << 8U);
 }
 
-uint32_t transfer(As5047uModel& chip, const Frame& frame) {
+static uint32_t transfer(As5047uModel& chip, const Frame& frame) {
     Frame received{};
     chip.select();
     chip.exchange(frame, received);
@@ -43,26 +45,24 @@ uint32_t transfer(As5047uModel& chip, const Frame& frame) {
            std::get<2>(received);
 }
 
-uint16_t data_of(uint32_t answer) {
+static uint16_t data_of(uint32_t answer) {
     return static_cast<uint16_t>((answer >> 8U) & 0x3FFFU);
 }
 
-bool valid(uint32_t answer) {
+static bool valid(uint32_t answer) {
     return As5047uModel::crc(static_cast<uint8_t>(answer >> 16U), static_cast<uint8_t>(answer >> 8U)) ==
            static_cast<uint8_t>(answer);
 }
 
-uint16_t read_register(As5047uModel& chip, uint16_t address) {
+static uint16_t read_register(As5047uModel& chip, uint16_t address) {
     transfer(chip, read_command(address));
     return data_of(transfer(chip, read_command(As5047uModel::nop_address)));
 }
 
-void write_register(As5047uModel& chip, uint16_t address, uint16_t data) {
+static void write_register(As5047uModel& chip, uint16_t address, uint16_t data) {
     transfer(chip, write_command(address));
     transfer(chip, data_frame(data));
 }
-
-}  // namespace
 
 TEST_SUITE("as5047u_model") {
     TEST_CASE("answers in SPI mode 1") {
