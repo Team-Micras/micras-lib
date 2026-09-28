@@ -46,6 +46,16 @@
                 "MICRAS_LIB_REFERENCE": "h7",
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "reference-g4",
+            "displayName": "Reference STM32G474 project and its bench program",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "MICRAS_LIB_REFERENCE": "g4",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
@@ -60,6 +70,10 @@
         {
             "name": "reference-h7",
             "configurePreset": "reference-h7"
+        },
+        {
+            "name": "reference-g4",
+            "configurePreset": "reference-g4"
         }
     ],
     "testPresets": [

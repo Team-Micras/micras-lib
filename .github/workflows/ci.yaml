@@ -63,10 +63,18 @@ jobs:
         if: always()
         run: docker rm --force host
 
-  stm32-h7:
-    name: 🔩 STM32H7 reference and bench
+  stm32:
+    name: 🔩 ${{ matrix.name }} reference and bench
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - family: h7
+            name: STM32H7
+          - family: g4
+            name: STM32G4
     steps:
       - name: 🔀 Checkout
         uses: actions/checkout@v7
@@ -75,22 +83,24 @@ jobs:
         id: cube
         uses: actions/cache/restore@v6
         with:
-          path: build/generated-h7
-          key: cube-h7-${{ hashFiles('reference/h7/reference.ioc', '.docker/Dockerfile') }}
+          path: build/generated-${{ matrix.family }}
+          key: cube-${{ matrix.family }}-${{ hashFiles(format('reference/{0}/reference.ioc', matrix.family), '.docker/Dockerfile') }}
 
       - name: ⚙️ Generate the Cube files
         if: steps.cube.outputs.cache-hit != 'true'
-        run: docker build --file .docker/Dockerfile --target generated-h7 --output type=local,dest=build/generated-h7 .
+        run: >
+          docker build --file .docker/Dockerfile --target generated-${{ matrix.family }}
+          --output type=local,dest=build/generated-${{ matrix.family }} .
 
       - name: 🗃️ Save the generated Cube files
         if: steps.cube.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: build/generated-h7
+          path: build/generated-${{ matrix.family }}
           key: ${{ steps.cube.outputs.cache-primary-key }}
 
       - name: 📂 Place the Cube files in the reference project
-        run: cp -r build/generated-h7/. reference/h7/
+        run: cp -r build/generated-${{ matrix.family }}/. reference/${{ matrix.family }}/
 
       - name: 🐋 Build the ARM image
         run: docker build --file .docker/Dockerfile --target stm32 --tag micras-lib:stm32 .
@@ -101,13 +111,13 @@ jobs:
           --volume "$PWD:/project" --workdir /project micras-lib:stm32 sleep infinity
 
       - name: ⚙️ Configure the reference project
-        run: docker exec stm32 cmake --preset reference-h7
+        run: docker exec stm32 cmake --preset reference-${{ matrix.family }}
 
       - name: 🔨 Build the reference and its bench
-        run: docker exec stm32 cmake --build --preset reference-h7 --parallel
+        run: docker exec stm32 cmake --build --preset reference-${{ matrix.family }} --parallel
 
       - name: 🚨 Lint the stm32 backend and the bench
-        run: docker exec stm32 cmake --build --preset reference-h7 --target lint
+        run: docker exec stm32 cmake --build --preset reference-${{ matrix.family }} --target lint
 
       - name: 🧹 Stop the ARM container
         if: always()

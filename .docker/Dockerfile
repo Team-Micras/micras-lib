@@ -63,6 +63,26 @@ FROM scratch AS generated-h7
 
 COPY --from=generator-h7 /project/reference/h7 /
 
+FROM thunderatz/stm32cubemx:6.18.1-g4 AS generator-g4
+
+WORKDIR /project
+COPY reference/g4/reference.ioc reference/g4/
+
+# The same generation as the H7 reference's, with the STM32CubeMX image that carries the G4 package
+RUN --network=none <<EOT
+    set -e
+    printf 'config load /project/reference/g4/reference.ioc\nproject generate\nexit\n' > /tmp/cube_script
+    xvfb-run --auto-servernum "${CUBE_PATH}/STM32CubeMX" -q /tmp/cube_script
+    rm /tmp/cube_script
+    test -f reference/g4/cmake/stm32cubemx/CMakeLists.txt || { echo "STM32CubeMX failed to generate the project" >&2; exit 1; }
+    rm -f reference/g4/CMakeLists.txt reference/g4/CMakePresets.json reference/g4/reference.ioc
+EOT
+
+# Only the generated files, can be replaced by already generated ones with --build-context generated-g4=<dir>
+FROM scratch AS generated-g4
+
+COPY --from=generator-g4 /project/reference/g4 /
+
 ##########################################################
 # ARM toolchain for the reference projects and benches   #
 ##########################################################
