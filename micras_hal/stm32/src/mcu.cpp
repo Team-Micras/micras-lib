@@ -7,23 +7,13 @@
 #include <span>
 
 #include <main.h>
+#include "micras/hal/family.hpp"
 #include "micras/hal/gpio.hpp"
 #include "micras/hal/mcu.hpp"
 #include "micras/hal/pwm.hpp"
 #include "micras/hal/timer.hpp"
 
 namespace micras::hal {
-/**
- * @brief Independent watchdog instance, spelled IWDG1 on the parts that have more than one.
- */
-static IWDG_TypeDef* watchdog_instance() {
-#ifdef IWDG1
-    return IWDG1;
-#else
-    return IWDG;
-#endif
-}
-
 /**
  * @brief Key values of the independent watchdog key register.
  */
@@ -63,39 +53,17 @@ static constexpr uint32_t inactive_compare{0xFFFFFFFF};
 bool Mcu::watchdog_reset{};
 bool Mcu::cpu_frequency_supported{};
 
-/**
- * @brief Check whether the option byte that lets the core run above its default maximum frequency is
- * set.
- *
- * @return True if the option byte is set, false otherwise or on a part without it.
- */
-static bool cpu_frequency_boosted() {
-#ifdef FLASH_OPTSR2_CPUFREQ_BOOST
-    return (FLASH->OPTSR2_CUR & FLASH_OPTSR2_CPUFREQ_BOOST) != 0;
-#else
-    return false;
-#endif
-}
-
 void Mcu::init(const Config& config) {
-#ifdef IWDG1
-    watchdog_reset = __HAL_RCC_GET_FLAG(RCC_FLAG_IWDG1RST) != 0;
-#else
-    watchdog_reset = __HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) != 0;
-#endif
+    watchdog_reset = family::was_reset_by_watchdog();
     __HAL_RCC_CLEAR_RESET_FLAGS();
 
-    SCB_EnableICache();
+    family::enable_caches();
 
     HAL_Init();
 
-#ifdef IWDG1
-    __HAL_DBGMCU_FREEZE_IWDG1();
-#else
-    __HAL_DBGMCU_FREEZE_IWDG();
-#endif
+    family::freeze_watchdog_in_debug();
 
-    cpu_frequency_supported = not config.cpu_frequency_boost or cpu_frequency_boosted();
+    cpu_frequency_supported = family::is_cpu_frequency_supported(config.cpu_frequency_boost);
 
     config.clock_init();
 
@@ -132,15 +100,17 @@ void Mcu::set_watchdog_timeout(uint32_t timeout_ms) {
 
     const uint32_t reload = std::clamp<uint32_t>(ticks, 1, watchdog_max_reload + 1) - 1;
 
-    watchdog_instance()->KR = watchdog_key_start;
-    watchdog_instance()->KR = watchdog_key_write;
-    watchdog_instance()->PR = prescaler;
-    watchdog_instance()->RLR = reload;
+    IWDG_TypeDef* const watchdog = family::watchdog();
+
+    watchdog->KR = watchdog_key_start;
+    watchdog->KR = watchdog_key_write;
+    watchdog->PR = prescaler;
+    watchdog->RLR = reload;
 
     const uint32_t start = Timer::get_counter();
     const uint32_t limit = Timer::to_cycles(watchdog_timeout_us);
 
-    while ((watchdog_instance()->SR & (IWDG_SR_PVU | IWDG_SR_RVU)) != 0) {
+    while ((watchdog->SR & (IWDG_SR_PVU | IWDG_SR_RVU)) != 0) {
         if (Timer::get_counter() - start > limit) {
             break;
         }
@@ -150,7 +120,7 @@ void Mcu::set_watchdog_timeout(uint32_t timeout_ms) {
 }
 
 void Mcu::refresh_watchdog() {
-    watchdog_instance()->KR = watchdog_key_reload;
+    family::watchdog()->KR = watchdog_key_reload;
 }
 
 bool Mcu::was_reset_by_watchdog() {

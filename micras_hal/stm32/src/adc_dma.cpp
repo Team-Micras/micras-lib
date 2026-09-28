@@ -10,6 +10,7 @@
 #include <span>
 
 #include "micras/hal/adc_dma.hpp"
+#include "micras/hal/family.hpp"
 
 extern "C" {
 /**
@@ -43,13 +44,7 @@ AdcDma::AdcDma(const Config& config) :
         config.init_function();
     }
 
-#ifdef STM32H7
-    const HAL_StatusTypeDef status = HAL_ADCEx_Calibration_Start(this->handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
-#elifdef STM32G4
-    const HAL_StatusTypeDef status = HAL_ADCEx_Calibration_Start(this->handle, ADC_SINGLE_ENDED);
-#else
-    #error "ADC calibration is only supported for STM32H7 and STM32G4 platforms."
-#endif
+    const bool calibrated = family::calibrate_adc(this->handle);
 
     auto* const slot = std::ranges::find(instances, nullptr);
 
@@ -58,7 +53,7 @@ AdcDma::AdcDma(const Config& config) :
     }
 
     *slot = this;
-    this->initialized = status == HAL_OK;
+    this->initialized = calibrated;
 }
 
 AdcDma::~AdcDma() {

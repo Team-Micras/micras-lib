@@ -8,6 +8,9 @@
 #include <cstdint>
 #include <span>
 
+#include <main.h>
+
+#include "micras/hal/family/flash.hpp"
 #include "micras/hal/flash.hpp"
 
 namespace micras::hal {
@@ -21,7 +24,7 @@ static const uint32_t base_address = FLASH_BASE + FLASH_SIZE / 2;
 /**
  * @brief Index of the first sector of the flash memory region reserved for data storage.
  */
-static constexpr uint16_t base_sector{FLASH_SECTOR_TOTAL / 2};
+static constexpr uint16_t base_sector{family::storage_first_sector};
 
 /**
  * @brief Round a number of bytes up to a whole number of flash words.

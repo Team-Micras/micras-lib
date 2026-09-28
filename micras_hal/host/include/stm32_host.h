@@ -281,6 +281,24 @@ struct CRC_HandleTypeDef {
 };
 
 /*****************************************
+ * Independent watchdog
+ *****************************************/
+
+/**
+ * @brief The registers of the independent watchdog.
+ *
+ * @note The host backend times the watchdog in the MCU port and never reads
+ *       these registers; they exist so that the family functions have the
+ *       same signatures on every backend.
+ */
+struct IWDG_TypeDef {
+    uint32_t KR;
+    uint32_t PR;
+    uint32_t RLR;
+    uint32_t SR;
+};
+
+/*****************************************
  * FMAC
  *****************************************/
 

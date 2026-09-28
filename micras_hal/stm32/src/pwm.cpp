@@ -3,34 +3,12 @@
  */
 
 #include <algorithm>
-#include <bit>
 #include <cstdint>
 
+#include "micras/hal/family.hpp"
 #include "micras/hal/pwm.hpp"
 
 namespace micras::hal {
-/**
- * @brief Get the frequency of the clock that feeds a timer.
- *
- * @note Timers run at twice the frequency of their APB bus when the APB prescaler is not 1.
- *
- * @param instance Timer peripheral.
- * @return Timer clock frequency in Hz.
- */
-static uint32_t get_timer_clock_frequency(const TIM_TypeDef* instance) {
-    RCC_ClkInitTypeDef clock_config{};
-    uint32_t           flash_latency{};
-    HAL_RCC_GetClockConfig(&clock_config, &flash_latency);
-
-    if (std::bit_cast<uintptr_t>(instance) >= APB2PERIPH_BASE) {
-        const uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
-        return clock_config.APB2CLKDivider == RCC_APB2_DIV1 ? pclk2 : 2 * pclk2;
-    }
-
-    const uint32_t pclk1 = HAL_RCC_GetPCLK1Freq();
-    return clock_config.APB1CLKDivider == RCC_APB1_DIV1 ? pclk1 : 2 * pclk1;
-}
-
 /**
  * @brief Mask that turns the identifier of one of the first four channels into the position of its
  * bits in the capture and compare enable register.
@@ -89,7 +67,7 @@ void Pwm::set_duty_cycle(float duty_cycle) {
 }
 
 void Pwm::set_frequency(uint32_t frequency) {
-    const uint32_t base_freq = get_timer_clock_frequency(this->handle->Instance);
+    const uint32_t base_freq = family::timer_clock(this->handle->Instance);
     const uint32_t prescaler = this->handle->Instance->PSC;
 
     const uint32_t autoreload = base_freq / ((prescaler + 1) * frequency) - 1;
@@ -103,7 +81,7 @@ float Pwm::get_frequency() const {
     const uint32_t period = center_aligned ? 2 * autoreload : autoreload + 1;
     const auto     ticks = static_cast<float>(this->handle->Instance->PSC + 1) * static_cast<float>(period);
 
-    return static_cast<float>(get_timer_clock_frequency(this->handle->Instance)) / ticks;
+    return static_cast<float>(family::timer_clock(this->handle->Instance)) / ticks;
 }
 
 bool Pwm::was_initialized() const {

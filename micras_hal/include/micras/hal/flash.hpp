@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <span>
 
-#include <main.h>
+#include "micras/hal/family/flash.hpp"
 
 namespace micras::hal {
 /**
@@ -20,14 +20,10 @@ namespace micras::hal {
  */
 class FlashWord {
 public:
-/**
- * @brief Number of 32 bit words inside a flash word.
- */
-#ifdef FLASH_NB_32BITWORD_IN_FLASHWORD
-    static constexpr uint32_t words{FLASH_NB_32BITWORD_IN_FLASHWORD};
-#else
-    static constexpr uint32_t words{sizeof(uint64_t) / sizeof(uint32_t)};
-#endif
+    /**
+     * @brief Number of 32 bit words inside a flash word.
+     */
+    static constexpr uint32_t words{family::flash_word_bits / 32U};
 
     /**
      * @brief Number of bytes inside a flash word.
@@ -76,7 +72,9 @@ private:
  * @brief Class to handle flash memory on STM32 microcontrollers.
  *
  * @note Only the region of the flash memory reserved for data storage is accessible, and every address is
- * relative to the beginning of that region.
+ * relative to the beginning of that region. The family header micras/hal/family/flash.hpp gives the
+ * geometry: a sector is the unit the family erases, a 128 KB sector on the STM32H7 and a 2 KB page on
+ * the STM32G4.
  */
 class Flash {
 public:
@@ -98,12 +96,12 @@ public:
     /**
      * @brief Number of bytes of an erasable sector.
      */
-    static constexpr uint32_t sector_size{FLASH_SECTOR_SIZE};
+    static constexpr uint32_t sector_size{family::sector_size};
 
     /**
      * @brief Number of sectors reserved for data storage.
      */
-    static constexpr uint16_t total_sectors{FLASH_SECTOR_TOTAL / 2};
+    static constexpr uint16_t total_sectors{family::storage_sectors};
 
     /**
      * @brief Number of bytes reserved for data storage.
@@ -158,8 +156,9 @@ public:
     /**
      * @brief Erase sectors of the flash memory.
      *
-     * @note This operation blocks the processor for around 2 s per sector, up to 4 s in the worst case, since
-     * the flash memory cannot be read while it is being erased.
+     * @note This operation blocks the processor, since the flash memory cannot be read while it is being
+     * erased: around 2 s per sector and up to 4 s in the worst case on the STM32H7, around 20 ms per page
+     * on the STM32G4.
      *
      * @param start_sector First sector to erase, counting from the first reserved sector.
      * @param number_of_sectors Number of sectors to erase.
