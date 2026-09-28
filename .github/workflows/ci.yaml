@@ -56,6 +56,9 @@ jobs:
       - name: 📝 Build the documentation
         run: docker exec host cmake --build --preset host --target docs
 
+      - name: 🔍 Check the shared code for chip macros
+        run: docker exec host scripts/check_no_chip_macros.sh
+
       - name: 🧹 Stop the host container
         if: always()
         run: docker rm --force host
