@@ -2,18 +2,17 @@
  * @file
  */
 
+#include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <span>
 #include <string_view>
 #include <vector>
 
+#include <doctest/doctest.h>
+
 #include "micras/comm/frame.hpp"
 #include "micras/comm/protocol.hpp"
-#include "test_host.hpp"
 
-using namespace micras::comm;
-
+namespace micras::comm {
 namespace {
 struct Vector {
     std::string_view     name;
@@ -22,8 +21,6 @@ struct Vector {
     std::vector<uint8_t> frame;
 };
 
-// The same table lives in micras-monitor, as src/lib/comm/__tests__/frameVectors.ts, so that both
-// implementations are pinned to the same bytes.
 const std::vector<Vector> vectors{
     {"hello", MessageType{0x01}, {}, {4, 1, 1, 1, 0}},
     {"hello_ack",
@@ -64,57 +61,52 @@ const std::vector<Vector> vectors{
      {44,  137, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220,
       221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 247, 247, 0}},
 };
+
 }  // namespace
 
-int main() {
-    for (const Vector& vector : vectors) {
-        std::vector<uint8_t> built(max_frame_size);
-        built.resize(encode_frame(vector.type, vector.payload, built));
+TEST_SUITE("frame") {
+    TEST_CASE("builds and reads the golden frames of micras-monitor's src/lib/comm/__tests__/frameVectors.ts") {
+        for (const Vector& vector : vectors) {
+            CAPTURE(vector.name);
 
-        if (built != vector.frame) {
-            std::printf("%.*s: built", int(vector.name.size()), vector.name.data());
+            std::vector<uint8_t> built(max_frame_size);
+            built.resize(encode_frame(vector.type, vector.payload, built));
 
-            for (uint8_t byte : built) {
-                std::printf(" %02X", byte);
+            CHECK(built == vector.frame);
+
+            FrameReader reader;
+            bool        complete = false;
+
+            for (const uint8_t byte : vector.frame) {
+                complete = reader.push(byte);
             }
 
-            std::puts("");
-            CHECK(false);
+            CHECK(complete);
+            CHECK(reader.type() == vector.type);
+            CHECK(std::vector<uint8_t>(reader.payload().begin(), reader.payload().end()) == vector.payload);
+            CHECK(reader.discarded() == 0);
         }
-
-        FrameReader reader;
-        bool        complete = false;
-
-        for (uint8_t byte : vector.frame) {
-            complete = reader.push(byte);
-        }
-
-        CHECK(complete);
-        CHECK(reader.type() == vector.type);
-        CHECK(std::vector<uint8_t>(reader.payload().begin(), reader.payload().end()) == vector.payload);
-        CHECK(reader.discarded() == 0);
     }
 
-    // A frame that lost a byte is discarded on its own, and the next one still arrives
-    {
+    TEST_CASE("discards a frame that lost a byte and reads the next one") {
         const std::vector<uint8_t>& good = vectors.at(3).frame;
         FrameReader                 reader;
-        bool                        complete = false;
 
-        for (std::size_t i = 0; i + 3 < good.size(); i++) {
-            CHECK(not reader.push(good[i]));
+        for (std::size_t index = 0; index + 3 < good.size(); index++) {
+            CHECK_FALSE(reader.push(good.at(index)));
         }
 
-        CHECK(not reader.push(0x00));
+        CHECK_FALSE(reader.push(0x00));
         CHECK(reader.discarded() == 1);
 
-        for (uint8_t byte : good) {
+        bool complete = false;
+
+        for (const uint8_t byte : good) {
             complete = reader.push(byte);
         }
 
         CHECK(complete);
         CHECK(reader.discarded() == 1);
     }
-
-    std::printf("frame ok: %zu vectors\n", vectors.size());
 }
+}  // namespace micras::comm

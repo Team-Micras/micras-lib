@@ -1,60 +1,86 @@
-# Tests for the parts that have no hardware behind them: the variable pool, the flash image, the
-# framing and the whole session layer. They build with the host compiler and run in the terminal,
-# which is what makes them worth writing at all, and is configured separately from the firmware
-# because it is a different toolchain:
+###############################################################################
+## Tests, on the host backend
+###############################################################################
+
+include(FetchContent)
+
+# Pinned by the commit of v2.5.3. SYSTEM keeps the project warnings out of its header.
+FetchContent_Declare(
+    doctest
+    GIT_REPOSITORY https://github.com/doctest/doctest.git
+    GIT_TAG 2d0a9359a60c51affe2a9bebb1be1dca47868151
+    SYSTEM
+)
+
+set(DOCTEST_NO_INSTALL ON)
+set(DOCTEST_WITH_TESTS OFF)
+FetchContent_MakeAvailable(doctest)
+
+include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
+
+###############################################################################
+## Support
+###############################################################################
+
+add_library(micras_lib_test_main STATIC
+    support/main.cpp
+)
+
+target_link_libraries(micras_lib_test_main PUBLIC
+    doctest::doctest
+)
+
+target_include_directories(micras_lib_test_main PUBLIC
+    support
+)
+
+micras_apply_warnings(micras_lib_test_main WERROR ${MICRAS_LIB_WERROR})
+
+# micras_lib_add_suite(<suite> <library>...)
 #
-#   cmake -S tests/host -B build/host && cmake --build build/host && ctest --test-dir build/host
+# One executable per folder of tests, whose test cases CTest discovers one by one
+function(micras_lib_add_suite SUITE)
+    file(GLOB SUITE_SOURCES CONFIGURE_DEPENDS ${SUITE}/*.cpp)
 
-cmake_minimum_required(VERSION 3.25...4.4)
+    add_executable(micras_lib_${SUITE}_tests
+        ${SUITE_SOURCES}
+    )
 
-project(micras_host_tests CXX)
+    target_link_libraries(micras_lib_${SUITE}_tests PRIVATE
+        micras_lib_test_main
+        ${ARGN}
+    )
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+    micras_apply_warnings(micras_lib_${SUITE}_tests WERROR ${MICRAS_LIB_WERROR})
 
-set(MICRAS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+    doctest_discover_tests(micras_lib_${SUITE}_tests
+        TEST_PREFIX "${SUITE}/"
+    )
+endfunction()
 
-enable_testing()
+###############################################################################
+## Suites
+###############################################################################
 
-add_library(micras_host_core STATIC
-    ${MICRAS_ROOT}/micras_core/src/cobs.cpp
-    ${MICRAS_ROOT}/micras_core/src/variable_pool.cpp
-)
+micras_lib_add_suite(core micras::core)
 
-target_include_directories(micras_host_core PUBLIC ${MICRAS_ROOT}/micras_core/include)
+if(MICRAS_LIB_COMM)
+    micras_lib_add_suite(comm micras::comm)
+endif()
 
-add_library(micras_host_comm STATIC
-    ${MICRAS_ROOT}/micras_comm/src/frame.cpp
-    ${MICRAS_ROOT}/micras_comm/src/link.cpp
-)
+if(MICRAS_LIB_NAV)
+    micras_lib_add_suite(nav micras::nav)
 
-target_include_directories(micras_host_comm PUBLIC ${MICRAS_ROOT}/micras_comm/include)
-target_link_libraries(micras_host_comm PUBLIC micras_host_core)
+    target_compile_definitions(micras_lib_nav_tests PRIVATE
+        MICRAS_LIB_TEST_MAZES="${CMAKE_CURRENT_SOURCE_DIR}/data/mazes"
+    )
+endif()
 
-# The flash of the storage is stood in for by a buffer that can be told to stop accepting writes,
-# which is the only way to test what an interrupted save leaves behind
-add_library(micras_host_proxy STATIC
-    ${MICRAS_ROOT}/micras_proxy/src/storage.cpp
-)
+if(MICRAS_LIB_HAL)
+    micras_lib_add_suite(hal micras::hal)
+endif()
 
-target_include_directories(micras_host_proxy PUBLIC
-    ${MICRAS_ROOT}/micras_proxy/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/stub
-)
-
-target_link_libraries(micras_host_proxy PUBLIC micras_host_core)
-
-foreach(TEST_NAME variable_pool cobs frame storage link)
-    add_executable(test_${TEST_NAME} test_${TEST_NAME}.cpp)
-    target_include_directories(test_${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_compile_options(test_${TEST_NAME} PRIVATE -Wall -Wextra -fsanitize=address,undefined)
-    target_link_options(test_${TEST_NAME} PRIVATE -fsanitize=address,undefined)
-    add_test(NAME ${TEST_NAME} COMMAND test_${TEST_NAME})
-endforeach()
-
-target_link_libraries(test_variable_pool PRIVATE micras_host_core)
-target_link_libraries(test_cobs PRIVATE micras_host_core)
-target_link_libraries(test_frame PRIVATE micras_host_comm)
-target_link_libraries(test_storage PRIVATE micras_host_proxy)
-target_link_libraries(test_link PRIVATE micras_host_comm)
+if(MICRAS_LIB_PROXY)
+    micras_lib_add_suite(proxy micras::proxy micras::proxy_models)
+    micras_lib_add_suite(models micras::proxy_models micras::proxy)
+endif()
