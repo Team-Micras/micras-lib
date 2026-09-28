@@ -9,7 +9,9 @@
 #include "micras/hal/family.hpp"
 
 namespace micras::hal::family {
-static constexpr uint32_t software_lock_key{0xC5ACCE55};
+namespace {
+constexpr uint32_t software_lock_key{0xC5ACCE55};
+}  // namespace
 
 bool calibrate_adc(ADC_HandleTypeDef* handle) {
     return HAL_ADCEx_Calibration_Start(handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) == HAL_OK;
