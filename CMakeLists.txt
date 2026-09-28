@@ -64,7 +64,7 @@ set(MICRAS_LIB_HAL_BACKEND "stm32" CACHE STRING "Backend of micras_hal: stm32 or
 set_property(CACHE MICRAS_LIB_HAL_BACKEND PROPERTY STRINGS stm32 host)
 
 set(MICRAS_LIB_STM32_FAMILY "" CACHE STRING "STM32 family of the stm32 backend, detected from the board target when empty")
-set_property(CACHE MICRAS_LIB_STM32_FAMILY PROPERTY STRINGS "" h7)
+set_property(CACHE MICRAS_LIB_STM32_FAMILY PROPERTY STRINGS "" h7 g4)
 
 set(MICRAS_LIB_CUBE_TARGET "stm32cubemx" CACHE STRING "Board target micras_hal links, on every backend")
 
