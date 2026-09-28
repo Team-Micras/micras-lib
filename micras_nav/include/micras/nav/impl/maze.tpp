@@ -229,7 +229,8 @@ void TMaze<width, height>::deserialize(const uint8_t* buffer, uint16_t size) {
     for (uint8_t row = 0; row < height; row++) {
         for (uint8_t column = 0; column < width; column++) {
             const uint16_t index = row * width + column;
-            const uint8_t  packed = (data[header_size + index / 2U] >> (4U * (index % 2U))) & 0x0FU;
+            const uint8_t  packed =
+                (static_cast<uint32_t>(data[header_size + index / 2U]) >> (4U * (index % 2U))) & 0x0FU;
 
             const std::array<std::pair<Side, uint8_t>, 2> sides{
                 {{Side::RIGHT, packed & 0x03U}, {Side::UP, packed >> 2U}}
