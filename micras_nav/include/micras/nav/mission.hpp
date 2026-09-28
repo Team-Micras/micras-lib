@@ -323,9 +323,9 @@ private:
     /**
      * @brief Stop at the center of the cell being crossed instead of going through it.
      *
-     * @param travelled The distance the reference covered since the robot crossed into the cell.
+     * @param traveled The distance the reference covered since the robot crossed into the cell.
      */
-    void divert_to_center(float travelled);
+    void divert_to_center(float traveled);
 
     /**
      * @brief Get the distance into a cell of the last point from which the robot, crossing it at

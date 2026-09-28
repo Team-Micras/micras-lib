@@ -269,15 +269,15 @@ TMission<width, height>::Status TMission<width, height>::update(
     if (this->watching_front and watched != nullptr and watched->kind == SegmentKind::STRAIGHT and
         watched->start.position.distance(this->get_entry_pose(this->watched_cell).position) <
             std::max(commit_distance, 0.0F) + watch_tolerance) {
-        const float travelled = watched->start.position.distance(this->get_entry_pose(this->watched_cell).position) +
-                                this->executor.get_reference().distance;
+        const float traveled = watched->start.position.distance(this->get_entry_pose(this->watched_cell).position) +
+                               this->executor.get_reference().distance;
 
         const WallState wall = this->maze.get_wall(this->watched_cell);
 
         if (wall == WallState::NO_WALL) {
             this->watching_front = false;
-        } else if (wall == WallState::WALL or travelled >= commit_distance) {
-            this->divert_to_center(travelled);
+        } else if (wall == WallState::WALL or traveled >= commit_distance) {
+            this->divert_to_center(traveled);
         }
     }
 
@@ -576,10 +576,10 @@ bool TMission<width, height>::finish_at_entry() {
 }
 
 template <uint8_t width, uint8_t height>
-void TMission<width, height>::divert_to_center(float travelled) {
+void TMission<width, height>::divert_to_center(float traveled) {
     const float      cell_size = this->dynamics.get_model().maze.cell_size;
     const Reference& current = this->executor.get_reference();
-    const float      remaining = cell_size / 2.0F - travelled;
+    const float      remaining = cell_size / 2.0F - traveled;
 
     this->watching_front = false;
 
@@ -592,7 +592,7 @@ void TMission<width, height>::divert_to_center(float travelled) {
     Move move{};
     move.add(make_segment(
         SegmentKind::STRAIGHT, remaining,
-        this->get_entry_pose(this->watched_cell).compose({.position = {.x = travelled, .y = 0.0F}, .orientation = 0.0F})
+        this->get_entry_pose(this->watched_cell).compose({.position = {.x = traveled, .y = 0.0F}, .orientation = 0.0F})
     ));
 
     if (this->maze.get_wall(this->watched_cell) == WallState::WALL) {
