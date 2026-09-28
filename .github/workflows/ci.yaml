@@ -27,7 +27,9 @@ jobs:
       - name: 🗃️ Restore the fetched dependencies
         uses: actions/cache@v6
         with:
-          path: build/host/_deps
+          path: |
+            build/host/_deps
+            build/host/CMakeFiles/fc-stamp
           key: deps-host-${{ hashFiles('micras_proxy/CMakeLists.txt', 'tests/CMakeLists.txt', 'cmake/micras_docs.cmake') }}
 
       # One long lived container runs every step below, as the user that owns the checkout
