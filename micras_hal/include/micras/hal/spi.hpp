@@ -15,6 +15,11 @@
 namespace micras::hal {
 /**
  * @brief Class to handle SPI peripheral on STM32 microcontrollers.
+ *
+ * @note The stm32 backend defines HAL_SPI_TxRxCpltCallback and HAL_SPI_ErrorCallback, so a consumer
+ * must not define them, and must keep USE_HAL_SPI_REGISTER_CALLBACKS at 0. They win over the vendor's
+ * weak defaults because they sit in the source of this class's constructor, which every program that
+ * uses the class references.
  */
 class Spi {
 public:

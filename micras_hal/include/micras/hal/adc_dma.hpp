@@ -13,6 +13,11 @@
 namespace micras::hal {
 /**
  * @brief Class to handle ADC peripheral on STM32 microcontrollers using DMA.
+ *
+ * @note The stm32 backend defines HAL_ADC_ConvCpltCallback and HAL_ADC_ErrorCallback, so a consumer
+ * must not define them, and must keep USE_HAL_ADC_REGISTER_CALLBACKS at 0. They win over the vendor's
+ * weak defaults because they sit in the source of this class's constructor, which every program that
+ * uses the class references.
  */
 class AdcDma {
 public:
