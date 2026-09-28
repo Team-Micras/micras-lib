@@ -41,6 +41,27 @@ inline constexpr uint16_t storage_first_sector{pages_per_bank};
  * @brief Number of pages reserved for data storage, the whole of bank 2.
  */
 inline constexpr uint16_t storage_sectors{pages_per_bank};
+
+/**
+ * @brief Round a number of bytes up to a whole number of the double words the flash memory programs.
+ *
+ * @param size Number of bytes to round up.
+ * @return Number of bytes the data occupies in the flash memory.
+ */
+constexpr uint32_t align_size(uint32_t size) {
+    constexpr uint32_t word_size{flash_word_bits / 8U};
+    return (size + word_size - 1) / word_size * word_size;
+}
+
+/**
+ * @brief Check that the part has the layout this header describes: dual bank mode, with banks of
+ * pages_per_bank pages.
+ *
+ * @return Whether the storage region exists on this part.
+ */
+inline bool is_storage_available() {
+    return (FLASH->OPTR & FLASH_OPTR_DBANK) != 0 and FLASH_PAGE_NB == pages_per_bank;
+}
 }  // namespace micras::hal::family
 
 #endif  // MICRAS_HAL_FAMILY_FLASH_HPP

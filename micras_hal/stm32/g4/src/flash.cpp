@@ -15,19 +15,13 @@
 #include "micras/hal/flash.hpp"
 
 namespace micras::hal {
-static constexpr uint32_t base_address{FLASH_BASE + (family::storage_first_sector * family::sector_size)};
-
-static constexpr uint32_t erase_complete{0xFFFFFFFFU};
-
 static_assert(FlashWord::size == sizeof(uint64_t));
 
-static constexpr uint32_t align_size(uint32_t size) {
-    return (size + FlashWord::size - 1) / FlashWord::size * FlashWord::size;
-}
+namespace {
+constexpr uint32_t base_address{FLASH_BASE + (family::storage_first_sector * family::sector_size)};
 
-static bool is_storage_available() {
-    return (FLASH->OPTR & FLASH_OPTR_DBANK) != 0 and FLASH_PAGE_NB == family::pages_per_bank;
-}
+constexpr uint32_t erase_complete{0xFFFFFFFFU};
+}  // namespace
 
 FlashWord::FlashWord(std::span<const uint8_t> data) {
     const auto data_address = std::bit_cast<uintptr_t>(data.data());
@@ -54,7 +48,7 @@ bool FlashWord::is_padded() const {
 }
 
 std::span<const uint8_t> Flash::read(uint32_t address, uint32_t size) {
-    if (address > total_size or size > total_size - address or not is_storage_available()) {
+    if (address > total_size or size > total_size - address or not family::is_storage_available()) {
         return {};
     }
 
@@ -74,11 +68,11 @@ Flash::Status Flash::write(uint32_t address, std::span<const uint8_t> data) {
         return Status::MISALIGNED;
     }
 
-    if (address > total_size or align_size(data.size()) > total_size - address) {
+    if (address > total_size or family::align_size(data.size()) > total_size - address) {
         return Status::OUT_OF_BOUNDS;
     }
 
-    if (not is_storage_available() or HAL_FLASH_Unlock() != HAL_OK) {
+    if (not family::is_storage_available() or HAL_FLASH_Unlock() != HAL_OK) {
         return Status::ERROR;
     }
 
@@ -122,7 +116,7 @@ Flash::Status Flash::erase_sectors(uint16_t start_sector, uint16_t number_of_sec
         .NbPages = number_of_sectors,
     };
 
-    if (not is_storage_available() or HAL_FLASH_Unlock() != HAL_OK) {
+    if (not family::is_storage_available() or HAL_FLASH_Unlock() != HAL_OK) {
         return Status::ERROR;
     }
 
