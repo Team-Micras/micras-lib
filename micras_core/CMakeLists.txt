@@ -1,16 +1,13 @@
-project(micras_core)
+file(GLOB_RECURSE MICRAS_CORE_SOURCES CONFIGURE_DEPENDS "src/*.c*")
 
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "src/*.c*")
-
-add_library(${PROJECT_NAME} STATIC
-    ${PROJECT_SOURCES}
+add_library(micras_core STATIC
+    ${MICRAS_CORE_SOURCES}
 )
 
-add_library(micras::core ALIAS ${PROJECT_NAME})
+add_library(micras::core ALIAS micras_core)
 
-# A requirement of the sources rather than a preference of whoever is building, so it propagates
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(micras_core PUBLIC
     include
 )
+
+micras_lib_setup_library(micras_core)
