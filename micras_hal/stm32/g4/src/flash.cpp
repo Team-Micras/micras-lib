@@ -29,16 +29,6 @@ static bool is_storage_available() {
     return (FLASH->OPTR & FLASH_OPTR_DBANK) != 0 and FLASH_PAGE_NB == family::pages_per_bank;
 }
 
-static void flush_data_cache() {
-    if ((FLASH->ACR & FLASH_ACR_DCEN) == 0) {
-        return;
-    }
-
-    __HAL_FLASH_DATA_CACHE_DISABLE();
-    __HAL_FLASH_DATA_CACHE_RESET();
-    __HAL_FLASH_DATA_CACHE_ENABLE();
-}
-
 FlashWord::FlashWord(std::span<const uint8_t> data) {
     const auto data_address = std::bit_cast<uintptr_t>(data.data());
 
@@ -108,7 +98,6 @@ Flash::Status Flash::write(uint32_t address, std::span<const uint8_t> data) {
     }
 
     HAL_FLASH_Lock();
-    flush_data_cache();
 
     return status;
 }
