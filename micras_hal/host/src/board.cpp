@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <bit>
+#include <cstdint>
 #include <format>
+#include <limits>
 #include <map>
 #include <tuple>
 #include <utility>
@@ -34,10 +36,11 @@ struct Registry {
     std::map<const void*, UartPort>    uarts;
     std::map<const void*, EncoderPort> encoders;
     std::map<SpiKey, SpiPort>          spis;
+    std::map<const void*, FmacPort>    fmacs;
     std::map<Key, std::string>         gpio_names;
     std::map<const void*, std::string> handle_names;
-    FlashPort                          flash{{.name = "flash"}};
-    McuPort                            mcu{{.name = "mcu"}};
+    FlashPort flash{{.name = "flash", .touched = false, .bound = false}, {}, std::numeric_limits<uint32_t>::max()};
+    McuPort   mcu{{.name = "mcu", .touched = false, .bound = false}, 0, 0, 0, 0};
 };
 
 /**
@@ -84,10 +87,9 @@ std::string gpio_name(const Key& key) {
  */
 template <typename Map, typename Namer>
 typename Map::mapped_type& find_or_create(Map& ports, const typename Map::key_type& key, const Namer& name) {
-    auto found = ports.find(key);
+    const auto [found, created] = ports.try_emplace(key);
 
-    if (found == ports.end()) {
-        found = ports.emplace(key, typename Map::mapped_type{}).first;
+    if (created) {
         found->second.name = name();
     }
 
@@ -136,6 +138,10 @@ void Board::spi_device(const SPI_HandleTypeDef* spi, const GPIO_TypeDef* cs_port
     port.device = &device;
     port.bound = true;
     Board::gpio(cs_port, cs_pin).bound = true;
+}
+
+FmacPort& Board::fmac(const void* fmac) {
+    return find_or_create(registry().fmacs, fmac, [fmac] { return handle_name(fmac); });
 }
 
 FlashPort& Board::flash() {

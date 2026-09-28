@@ -24,9 +24,9 @@ namespace micras::hal::host {
  *
  * @note A port is created the first time either side asks for it, keyed by the
  *       address of the Cube handle or GPIO port that names it, so the firmware's
- *       own configuration is the key: `.port = LED_Red_GPIO_Port, .pin =
- *       LED_Red_Pin` in target.hpp and the same two names in a robot's bindings
- *       reach the same port. Nothing here knows a physics engine; bindings
+ *       own configuration is the key: `.port = Status_LED_GPIO_Port, .pin =
+ *       Status_LED_Pin` in a board configuration and the same two names in a
+ *       robot's bindings reach the same port. Nothing here knows a physics engine; bindings
  *       connect ports to whatever simulates the board.
  *
  * @note Not thread safe, and it does not need to be: the firmware and whatever
@@ -111,6 +111,14 @@ public:
      */
     static void
         spi_device(const SPI_HandleTypeDef* spi, const GPIO_TypeDef* cs_port, uint16_t cs_pin, SpiDevice& device);
+
+    /**
+     * @brief Get the port of the filter math accelerator.
+     *
+     * @param fmac FMAC handle.
+     * @return The port.
+     */
+    static FmacPort& fmac(const void* fmac);
 
     /**
      * @brief Get the flash.

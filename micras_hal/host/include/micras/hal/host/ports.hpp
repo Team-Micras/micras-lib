@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -192,6 +193,62 @@ struct FlashPort : Port {
      * @brief Contents, erased to 0xFF.
      */
     std::vector<uint8_t> bytes;
+
+    /**
+     * @brief Flash words the writes may still program before a simulated power loss.
+     *
+     * @note Each flash word a write programs uses one; a write that finds none left fails there,
+     *       with the words before it programmed, as a write the power cut off leaves the flash.
+     *       Unlimited unless a test sets it.
+     */
+    uint32_t write_budget{std::numeric_limits<uint32_t>::max()};
+};
+
+/**
+ * @brief The filter math accelerator, running the filter the firmware configured.
+ *
+ * @note The accelerator computes in q1.15 and keeps the history of its filter
+ *       in its own memory, which is what this port holds on the host.
+ */
+struct FmacPort : Port {
+    /**
+     * @brief Coefficients applied to the inputs, most recent first, in q1.15.
+     */
+    std::vector<int16_t> feed_forward;
+
+    /**
+     * @brief Coefficients applied to the previous outputs, most recent first, in q1.15, added.
+     */
+    std::vector<int16_t> feedback;
+
+    /**
+     * @brief Last inputs, most recent first, as many as there are feed forward coefficients.
+     */
+    std::deque<int16_t> inputs;
+
+    /**
+     * @brief Last outputs, most recent first, as many as there are feedback coefficients.
+     */
+    std::deque<int16_t> outputs;
+
+    /**
+     * @brief Start a filter with an empty history.
+     *
+     * @param feed_forward_coefficients Coefficients applied to the inputs.
+     * @param feedback_coefficients Coefficients applied to the previous outputs.
+     */
+    void configure(std::span<const int16_t> feed_forward_coefficients, std::span<const int16_t> feedback_coefficients);
+
+    /**
+     * @brief Push one input through the filter, as a write to the accelerator's input register does.
+     *
+     * @note The products are exact and their sum is kept whole, where the accelerator's accumulator
+     *       has 26 bits; the output is the sum shifted back to q1.15 and clipped to its range.
+     *
+     * @param sample Input, in q1.15.
+     * @return Output, in q1.15.
+     */
+    int16_t filter(int16_t sample);
 };
 
 /**

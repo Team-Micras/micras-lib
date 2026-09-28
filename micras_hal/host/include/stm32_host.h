@@ -284,8 +284,17 @@ struct CRC_HandleTypeDef {
  * FMAC
  *****************************************/
 
+///@{
+inline constexpr uint32_t HAL_FMAC_STATE_RESET{0x00U};
+inline constexpr uint32_t HAL_FMAC_STATE_READY{0x20U};
+
+///@}
+
 /**
- * @brief The filter accelerator's handle; nothing on the host uses it.
+ * @brief The filter accelerator's handle.
+ *
+ * @note The host backend keeps the filter itself in the accelerator's port, so
+ *       the handle carries only the state the init function sets.
  */
 struct FMAC_HandleTypeDef {
     uint32_t State;

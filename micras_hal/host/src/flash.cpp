@@ -96,9 +96,12 @@ Flash::Status Flash::write(uint32_t address, std::span<const uint8_t> data) {
         const FlashWord          word{data.subspan(offset)};
         const std::span<uint8_t> target = memory.subspan(address + offset, FlashWord::size);
 
-        if (not std::ranges::all_of(target, [](uint8_t byte) { return byte == FlashWord::erased_value; })) {
+        if (port.write_budget == 0 or
+            not std::ranges::all_of(target, [](uint8_t byte) { return byte == FlashWord::erased_value; })) {
             return Status::ERROR;
         }
+
+        port.write_budget--;
 
         const std::span<const uint8_t> bytes{std::bit_cast<const uint8_t*>(word.data()), FlashWord::size};
         std::ranges::copy(bytes, target.begin());
