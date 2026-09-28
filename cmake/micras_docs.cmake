@@ -19,13 +19,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(doxygen-awesome-css)
 
-# MICRAS_LIB_VERSION is resolved by Doxygen through $(MICRAS_LIB_VERSION) in the Doxyfile.
-# Backticks are used instead of $() so that the make generator does not expand it first.
+# The Doxyfile reads the version, the theme and the output directory from the environment
 add_custom_target(docs
-    COMMAND MICRAS_LIB_VERSION=`git describe --always --dirty --tags 2>/dev/null || echo unknown`
+    COMMAND ${CMAKE_COMMAND} -E env
             DOXYGEN_AWESOME_DIR=${doxygen-awesome-css_SOURCE_DIR}
             MICRAS_LIB_DOCS_DIR=${CMAKE_BINARY_DIR}/docs
-            ${MICRAS_DOXYGEN} Doxyfile
+            sh -c "MICRAS_LIB_VERSION=\"$(git describe --always --dirty --tags 2>/dev/null || echo unknown)\" exec ${MICRAS_DOXYGEN} Doxyfile"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating the HTML documentation in ${CMAKE_BINARY_DIR}/docs"
+    VERBATIM
 )
