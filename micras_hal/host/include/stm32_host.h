@@ -292,9 +292,24 @@ struct CRC_HandleTypeDef {
  *       same signatures on every backend.
  */
 struct IWDG_TypeDef {
+    /**
+     * @brief Key register: starts, reloads and unlocks the watchdog.
+     */
     uint32_t KR;
+
+    /**
+     * @brief Prescaler register.
+     */
     uint32_t PR;
+
+    /**
+     * @brief Reload register.
+     */
     uint32_t RLR;
+
+    /**
+     * @brief Status register, with the prescaler and reload update flags.
+     */
     uint32_t SR;
 };
 
