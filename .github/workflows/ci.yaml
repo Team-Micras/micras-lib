@@ -12,10 +12,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# A push to a branch of this repository is checked once by its push run, so a pull request only runs
+# here when it comes from a fork
 jobs:
   host:
     name: 🧪 Host build, tests, format, lint and docs
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 45
     steps:
       - name: 🔀 Checkout
@@ -66,6 +69,7 @@ jobs:
   stm32:
     name: 🔩 ${{ matrix.name }} reference and bench
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 45
     strategy:
       fail-fast: false
