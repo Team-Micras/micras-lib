@@ -1,0 +1,45 @@
+# Doxyfile for micras-lib; built by the docs target, which fills in the $(...) variables
+
+PROJECT_NAME           = "micras-lib"
+PROJECT_NUMBER         = $(MICRAS_LIB_VERSION)
+PROJECT_BRIEF          = "Core, navigation, communication, HAL and proxies of the Micras micromouse, for STM32 and the host"
+OUTPUT_DIRECTORY       = $(MICRAS_LIB_DOCS_DIR)
+DISTRIBUTE_GROUP_DOC   = YES
+NUM_PROC_THREADS       = 0
+DOT_NUM_THREADS        = 0
+WARN_IF_UNDOC_ENUM_VAL = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_PRIV_VIRTUAL   = YES
+EXTRACT_STATIC         = YES
+CASE_SENSE_NAMES       = YES
+SHOW_INCLUDE_FILES     = NO
+SHOW_HEADERFILE        = NO
+INPUT                  = README.md \
+                         micras_core/ \
+                         micras_nav/ \
+                         micras_comm/ \
+                         micras_hal/ \
+                         micras_proxy/
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.cpp *.h *.hpp *.tpp *.md
+EXTENSION_MAPPING      = tpp=C++
+USE_MDFILE_AS_MAINPAGE = README.md
+VERBATIM_HEADERS       = NO
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_COLORSTYLE        = AUTO_DARK
+HTML_EXTRA_STYLESHEET  = $(DOXYGEN_AWESOME_DIR)/doxygen-awesome.css \
+                         $(DOXYGEN_AWESOME_DIR)/doxygen-awesome-sidebar-only.css
+UML_LOOK               = YES
+UML_LIMIT_NUM_FIELDS   = 50
+DOT_WRAP_THRESHOLD     = 100
+TEMPLATE_RELATIONS     = YES
+INCLUDE_GRAPH          = NO
+INCLUDED_BY_GRAPH      = NO
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DOT_GRAPH_MAX_NODES    = 100
+MAX_DOT_GRAPH_DEPTH    = 1
