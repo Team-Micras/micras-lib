@@ -63,11 +63,15 @@ bool UartDma::start_tx(std::span<const uint8_t> from) {
         return false;
     }
 
+    if (this->handle->gState == HAL_UART_STATE_BUSY_TX) {
+        HAL_UART_AbortTransmit(this->handle);
+    }
+
     return HAL_UART_Transmit_DMA(this->handle, std::bit_cast<const uint8_t*>(from.data()), from.size()) == HAL_OK;
 }
 
 bool UartDma::is_transmitting() const {
-    return this->handle->gState == HAL_UART_STATE_BUSY_TX;
+    return this->handle->gState == HAL_UART_STATE_BUSY_TX and this->handle->hdmatx->State == HAL_DMA_STATE_BUSY;
 }
 
 bool UartDma::was_initialized() const {

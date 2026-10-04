@@ -18,6 +18,11 @@ namespace micras::hal {
  * counter against what was already taken. Nothing is done in an interrupt, there is no window
  * between stopping and restarting in which bytes are lost, and the latency is one control loop
  * iteration, which is far below anything the radio adds.
+ *
+ * Transmission is polled the same way. The HAL only returns the peripheral to ready from the
+ * transmission complete interrupt of the UART, which is left disabled so that a reception error
+ * never aborts the circular transfer. A transfer is over once its DMA stream is, and the next
+ * one closes the state the HAL left open.
  */
 class UartDma {
 public:
@@ -85,7 +90,10 @@ public:
     /**
      * @brief Check if a transfer is still running.
      *
-     * @return True if the peripheral is still sending, false otherwise.
+     * @note The last byte may still be leaving the shift register, which does not stop the next
+     * transfer from starting.
+     *
+     * @return True if the DMA is still feeding the peripheral, false otherwise.
      */
     bool is_transmitting() const;
 
