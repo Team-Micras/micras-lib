@@ -12,6 +12,14 @@ bool calibrate_adc(ADC_HandleTypeDef* /*handle*/) {
     return true;
 }
 
+bool is_dma_enabled(const DMA_HandleTypeDef* /*handle*/) {
+    return true;
+}
+
+bool has_dma_finished(const DMA_HandleTypeDef* /*handle*/) {
+    return false;
+}
+
 void enable_caches() { }
 
 bool was_reset_by_watchdog() {

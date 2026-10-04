@@ -13,6 +13,14 @@ bool calibrate_adc(ADC_HandleTypeDef* handle) {
     return HAL_ADCEx_Calibration_Start(handle, ADC_SINGLE_ENDED) == HAL_OK;
 }
 
+bool is_dma_enabled(const DMA_HandleTypeDef* handle) {
+    return (handle->Instance->CCR & DMA_CCR_EN) != 0;
+}
+
+bool has_dma_finished(const DMA_HandleTypeDef* handle) {
+    return (handle->Instance->CCR & DMA_CCR_EN) == 0 or handle->Instance->CNDTR == 0;
+}
+
 void enable_caches() { }
 
 bool was_reset_by_watchdog() {

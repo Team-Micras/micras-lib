@@ -113,6 +113,11 @@ void AdcDma::on_sequence_complete(const ADC_HandleTypeDef* handle) {
         return;
     }
 
+    if (__HAL_ADC_GET_FLAG(handle, ADC_FLAG_OVR)) {
+        instance->stopped = true;
+        return;
+    }
+
     std::ranges::copy(instance->buffer, instance->snapshot.begin());
     instance->sequence = instance->sequence + 1;
 }
@@ -138,13 +143,22 @@ void AdcDma::stop_dma() {
 }
 
 void AdcDma::recover() {
-    if (not this->stopped) {
+    const DMA_HandleTypeDef* const dma = this->handle->DMA_Handle;
+    const bool frozen = dma->State == HAL_DMA_STATE_BUSY and
+                        (__HAL_ADC_GET_FLAG(this->handle, ADC_FLAG_OVR) or not family::is_dma_enabled(dma));
+
+    if (not this->stopped and not frozen) {
         return;
     }
 
     HAL_ADC_Stop_DMA(this->handle);
     this->handle->State = this->handle->State & ~(HAL_ADC_STATE_ERROR_DMA | HAL_ADC_STATE_ERROR_INTERNAL);
-    this->stopped = HAL_ADC_Start_DMA(this->handle, this->transfer.data(), this->transfer.size()) != HAL_OK;
+    this->stopped = false;
+
+    if (HAL_ADC_Start_DMA(this->handle, this->transfer.data(), this->transfer.size()) != HAL_OK) {
+        this->stopped = true;
+    }
+
     restarts++;
 }
 

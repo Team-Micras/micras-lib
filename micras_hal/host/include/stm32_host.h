@@ -113,6 +113,15 @@ inline constexpr uint32_t TIM_COUNTERMODE_CENTERALIGNED1{0x1U << 5U};
 ///@}
 
 /*****************************************
+ * DMA
+ *****************************************/
+
+/**
+ * @brief A DMA handle, whose transfers the host backend never lets stop.
+ */
+struct DMA_HandleTypeDef { };
+
+/*****************************************
  * ADC
  *****************************************/
 

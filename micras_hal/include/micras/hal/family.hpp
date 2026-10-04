@@ -24,6 +24,30 @@ namespace micras::hal::family {
 bool calibrate_adc(ADC_HandleTypeDef* handle);
 
 /**
+ * @brief Check whether the stream or channel of a DMA is enabled.
+ *
+ * @note A transfer error disables the stream or channel in hardware, so a transfer the vendor HAL
+ * still holds as busy and whose stream or channel is disabled has stopped, whether or not its
+ * interrupt is enabled to report it.
+ *
+ * @param handle Handle of the DMA, initialized.
+ * @return True if the stream or channel is enabled, false otherwise.
+ */
+bool is_dma_enabled(const DMA_HandleTypeDef* handle);
+
+/**
+ * @brief Check whether a transfer of a DMA in normal mode is over.
+ *
+ * @note A stream of the DMA controllers of the STM32H7 clears its enable bit once it moved its last
+ * item, while a channel of its BDMA or of the STM32G4 keeps it set and only its counter reaches zero.
+ * A transfer error disables either, which ends the transfer as well.
+ *
+ * @param handle Handle of the DMA, running a transfer started in normal mode.
+ * @return True if the DMA moved its last item or an error stopped it, false while items are left.
+ */
+bool has_dma_finished(const DMA_HandleTypeDef* handle);
+
+/**
  * @brief Enable the caches the family runs its code from, before the vendor HAL is initialized.
  */
 void enable_caches();

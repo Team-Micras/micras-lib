@@ -9,6 +9,7 @@
 #include <cstring>
 #include <span>
 
+#include "micras/hal/family.hpp"
 #include "micras/hal/uart_dma.hpp"
 
 namespace micras::hal {
@@ -35,7 +36,8 @@ std::size_t UartDma::read(std::span<uint8_t> into) {
         return 0;
     }
 
-    if (this->handle->RxState != HAL_UART_STATE_BUSY_RX) {
+    if (this->handle->RxState != HAL_UART_STATE_BUSY_RX or not family::is_dma_enabled(this->handle->hdmarx)) {
+        HAL_UART_AbortReceive(this->handle);
         this->start_rx(this->rx_buffer);
         return 0;
     }
@@ -71,7 +73,17 @@ bool UartDma::start_tx(std::span<const uint8_t> from) {
 }
 
 bool UartDma::is_transmitting() const {
-    return this->handle->gState == HAL_UART_STATE_BUSY_TX and this->handle->hdmatx->State == HAL_DMA_STATE_BUSY;
+    if (this->handle->gState != HAL_UART_STATE_BUSY_TX) {
+        return false;
+    }
+
+    const DMA_HandleTypeDef* const dma = this->handle->hdmatx;
+
+    if (dma->State == HAL_DMA_STATE_BUSY and not family::has_dma_finished(dma)) {
+        return true;
+    }
+
+    return this->handle->FifoMode == UART_FIFOMODE_ENABLE and not __HAL_UART_GET_FLAG(this->handle, UART_FLAG_TXFE);
 }
 
 bool UartDma::was_initialized() const {

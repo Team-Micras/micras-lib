@@ -17,6 +17,23 @@ bool calibrate_adc(ADC_HandleTypeDef* handle) {
     return HAL_ADCEx_Calibration_Start(handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) == HAL_OK;
 }
 
+bool is_dma_enabled(const DMA_HandleTypeDef* handle) {
+    if (IS_DMA_STREAM_INSTANCE(handle->Instance)) {
+        return (static_cast<const DMA_Stream_TypeDef*>(handle->Instance)->CR & DMA_SxCR_EN) != 0;
+    }
+
+    return (static_cast<const BDMA_Channel_TypeDef*>(handle->Instance)->CCR & BDMA_CCR_EN) != 0;
+}
+
+bool has_dma_finished(const DMA_HandleTypeDef* handle) {
+    if (IS_DMA_STREAM_INSTANCE(handle->Instance)) {
+        return (static_cast<const DMA_Stream_TypeDef*>(handle->Instance)->CR & DMA_SxCR_EN) == 0;
+    }
+
+    const auto* const channel = static_cast<const BDMA_Channel_TypeDef*>(handle->Instance);
+    return (channel->CCR & BDMA_CCR_EN) == 0 or channel->CNDTR == 0;
+}
+
 void enable_caches() {
     SCB_EnableICache();
 }

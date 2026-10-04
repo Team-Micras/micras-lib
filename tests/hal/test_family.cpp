@@ -44,5 +44,12 @@ TEST_SUITE("family") {
         hal::family::freeze_watchdog_in_debug();
         hal::family::enable_cycle_counter();
     }
+
+    TEST_CASE("never stops or ends a transfer on a host") {
+        const DMA_HandleTypeDef dma{};
+
+        CHECK(hal::family::is_dma_enabled(&dma));
+        CHECK_FALSE(hal::family::has_dma_finished(&dma));
+    }
 }
 }  // namespace micras::test

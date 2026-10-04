@@ -114,11 +114,12 @@ public:
      * @details After an overrun the converter stops requesting transfers until its overrun flag is
      * cleared, and clearing only the flag would leave one conversion missing and every following
      * value in the place of another channel. A restart begins the buffer again at its first
-     * channel. The error callback only marks the converter, since stopping and starting it waits on
-     * the hardware, and this restarts it outside the interrupt. A transfer error of the DMA calls
-     * the error callback too, and leaves the vendor HAL in an error state that only a new
-     * initialization clears and that turns every complete transfer into another error, so that
-     * state is cleared before the start.
+     * channel. A converter is restarted when the error callback or the snapshot marked it, and also
+     * when its overrun flag is set or its DMA stopped while the vendor HAL still holds the transfer
+     * as running, which is how an overrun or a transfer error shows when the interrupts of the
+     * converter and of its DMA are disabled. A transfer error leaves the vendor HAL in an error
+     * state that only a new initialization clears and that turns every complete transfer into
+     * another error, so that state is cleared before the start.
      *
      * @note To be called once per iteration by the owner of the converter. No sequence completes
      * until then, so read_snapshot reports none as new.
@@ -161,9 +162,10 @@ public:
     /**
      * @brief Count a complete sequence of a converter and copy its buffer to its snapshot.
      *
-     * @note To be called by the conversion complete callback only. Nothing is counted while the
-     * converter is stopped: after an overrun the vendor HAL clears the flag and the transfers go
-     * on out of line with the sequence until the converter is restarted.
+     * @note To be called by the conversion complete callback only. An overrun drops a conversion,
+     * and the transfers go on out of line with the sequence until the converter is restarted, so
+     * nothing is counted once one happened: the converter is marked stopped here when the overrun
+     * flag is set, without waiting for the overrun interrupt or for recover to notice it.
      *
      * @param handle Handle of the converter that completed a sequence.
      */

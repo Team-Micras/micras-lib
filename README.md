@@ -104,9 +104,9 @@ differs between families is in `micras_hal/stm32/<family>/`, which CMake compile
 family alone: the flash driver (`src/flash.cpp`), the flash geometry the shared `flash.hpp` reads
 (`include/micras/hal/family/flash.hpp`: `flash_word_bits`, `sector_size`, `storage_first_sector`,
 `storage_sectors`), and the steps of the shared classes that differ, the functions of the internal
-header `micras/hal/family.hpp` (`calibrate_adc`, `enable_caches`, `was_reset_by_watchdog`,
-`freeze_watchdog_in_debug`, `is_cpu_frequency_supported`, `watchdog`, `timer_clock`,
-`enable_cycle_counter`) in `src/family.cpp`. `scripts/check_no_chip_macros.sh` fails when a
+header `micras/hal/family.hpp` (`calibrate_adc`, `is_dma_enabled`, `has_dma_finished`,
+`enable_caches`, `was_reset_by_watchdog`, `freeze_watchdog_in_debug`, `is_cpu_frequency_supported`,
+`watchdog`, `timer_clock`, `enable_cycle_counter`) in `src/family.cpp`. `scripts/check_no_chip_macros.sh` fails when a
 conditional directive in the shared code (`micras_hal/include`, `micras_hal/stm32/src`, the proxies,
 core, nav and comm) names a chip, and the CI runs it.
 
