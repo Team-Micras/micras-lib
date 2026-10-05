@@ -75,6 +75,30 @@ public:
     void update();
 
     /**
+     * @brief Counts of how the transfers of the sensor ended, since it was constructed.
+     *
+     * @note For telling a sensor that stopped sampling from a bus that corrupts what it sends: a
+     * sample with a new angular rate, a transfer that brought nothing new, a status no sensor can
+     * send, a transfer the bus reported as failed, and an update that found the last transfer still
+     * running. The last status refused is kept, since its bits tell a line held high from noise.
+     */
+    struct Diagnostics {
+        uint32_t samples;
+        uint32_t stale;
+        uint32_t rejected;
+        uint32_t failed;
+        uint32_t busy;
+        uint8_t  last_rejected_status;
+    };
+
+    /**
+     * @brief Get the counts of how the transfers ended.
+     *
+     * @return The counts.
+     */
+    const Diagnostics& get_diagnostics() const;
+
+    /**
      * @brief Check whether the last update brought an angular rate that was not seen before.
      *
      * @note The sensor samples on its own clock, so a caller running faster than the output data
@@ -235,6 +259,11 @@ private:
      * @brief Flag to check if the last update brought a new angular rate.
      */
     bool fresh{};
+
+    /**
+     * @brief Counts of how the transfers ended.
+     */
+    Diagnostics diagnostics{};
 
     /**
      * @brief Flag to check if the IMU was initialized.
