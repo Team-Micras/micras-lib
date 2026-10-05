@@ -106,6 +106,18 @@ public:
     void turn_off();
 
     /**
+     * @brief Turn the emitter of one sensor on or off, leaving the others as they are.
+     *
+     * @note For measuring how much of each emitter's light reaches each receiver. A reading is the
+     * difference between the scans of the two emitter groups, so with a single emitter lit every
+     * receiver reads exactly the light that emitter puts into it, whichever group it belongs to.
+     *
+     * @param sensor_index Index of the sensor whose emitter is switched.
+     * @param on Whether the emitter is lit.
+     */
+    void set_emitter(uint8_t sensor_index, bool on);
+
+    /**
      * @brief Update the wall sensors readings.
      *
      * @note Nothing is recomputed unless the converter completed a sequence since the last call,

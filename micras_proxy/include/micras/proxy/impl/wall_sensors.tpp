@@ -115,6 +115,11 @@ void TWallSensors<num_of_sensors>::turn_off() {
 }
 
 template <uint8_t num_of_sensors>
+void TWallSensors<num_of_sensors>::set_emitter(uint8_t sensor_index, bool on) {
+    this->led_pwms.at(sensor_index).set_duty_cycle(on ? this->emitter_duty_cycle : 0.0F);
+}
+
+template <uint8_t num_of_sensors>
 void TWallSensors<num_of_sensors>::update() {
     this->adc.recover();
 
