@@ -13,6 +13,7 @@ Battery::Battery(const Config& config) :
 
 void Battery::update() {
     this->adc.recover();
+    this->reading = *static_cast<const volatile uint16_t*>(&this->raw_reading);
     this->filter.update(this->get_adc_reading());
 }
 
@@ -25,7 +26,7 @@ float Battery::get_voltage_raw() const {
 }
 
 float Battery::get_adc_reading() const {
-    return static_cast<float>(this->raw_reading) / this->adc.get_max_reading();
+    return static_cast<float>(this->reading) / this->adc.get_max_reading();
 }
 
 bool Battery::was_initialized() const {

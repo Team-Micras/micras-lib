@@ -74,9 +74,17 @@ private:
     hal::AdcDma adc;
 
     /**
-     * @brief Raw reading from the battery.
+     * @brief Conversion the DMA writes to.
+     *
+     * @note Nothing in the program writes it, so the compiler is free to assume it still holds its
+     * initial zero. It is only ever read through a volatile access, once per update, into reading.
      */
     uint16_t raw_reading{};
+
+    /**
+     * @brief Conversion copied out by the last update, which every getter reads.
+     */
+    uint16_t reading{};
 
     /**
      * @brief Maximum voltage that can be read.
