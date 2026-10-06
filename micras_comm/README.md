@@ -49,5 +49,5 @@ what both the microcontroller and `DataView` in the browser already are.
   with a result; the `idle` flag on a variable refuses the dangerous ones while the robot is moving.
   `COMMAND` happens once, when it arrives.
 - **The link cannot carry the control loop.** It is between twenty and a hundred times too slow for
-  8 kHz, so a group is defined with a period in loop iterations and only every period-th iteration
+  the loop's rate, so a group is defined with a period in loop iterations and only every period-th iteration
   is sent. The rate the application asks for is a rate it can actually receive.
