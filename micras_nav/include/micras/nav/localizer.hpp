@@ -30,7 +30,8 @@ namespace micras::nav {
  * Every correction goes through three guards: the illuminated spot has to lie on the face of a
  * single known wall, the innovation has to be plausible for what the filter believes, and the
  * correction is capped, so that a wrong reading is rejected and a wrong wall in the map can only
- * drag the pose slowly.
+ * drag the pose slowly. A saturated reading is not a range, only a bound on one, and corrects
+ * nothing.
  *
  * @note The covariance is kept as the factors of `P = U * D * U^T`, with U unit upper triangular and
  * D diagonal, and updated with the algorithms of Thornton and Bierman. In single precision this

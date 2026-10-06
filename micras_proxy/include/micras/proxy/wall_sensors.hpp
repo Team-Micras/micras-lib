@@ -94,13 +94,15 @@ public:
      * and it is new for a single update after the sensor produces a value. The dark reading is the
      * one taken with the emitter off, as a fraction of the full scale, which is the ambient light
      * the receiver sees. The reading is blind when that light saturates the receiver, and then says
-     * nothing about a wall.
+     * nothing about a wall. It is saturated when the receiver lit by its emitter reaches its
+     * ceiling: the distance is then the shortest the sensor can tell, and the wall may be nearer.
      */
     struct Reading {
         float distance;
         float slow_distance;
         float dark;
         bool  valid;
+        bool  saturated;
         bool  blind;
         bool  is_new;
     };
@@ -556,7 +558,8 @@ private:
     float max_distance;
 
     /**
-     * @brief Reading above which the sensor is saturated.
+     * @brief Level of the receiver, lit by its emitter and the ambient light, at which it is taken as
+     * saturated.
      */
     float max_reading;
 

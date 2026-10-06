@@ -50,7 +50,7 @@ void Localizer::correct(
             this->track_edge(sensor, reading, sampled, hit, wall_model, maze);
         }
 
-        if (not reading.valid or not hit.valid or hit.state != WallState::WALL) {
+        if (not reading.valid or reading.saturated or not hit.valid or hit.state != WallState::WALL) {
             continue;
         }
 
@@ -118,7 +118,8 @@ void Localizer::track_edge(
     }
 
     const bool on_wall = hit.valid and hit.state == WallState::WALL and hit.range < this->config.edge_range and
-                         std::abs(reading.distance - hit.range) < tolerance(hit.range) and reading.valid;
+                         std::abs(reading.distance - hit.range) < tolerance(hit.range) and reading.valid and
+                         not reading.saturated;
 
     if (on_wall) {
         tracker.locked = true;

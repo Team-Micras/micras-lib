@@ -273,13 +273,12 @@ void TWallSensors<num_of_sensors>::update() {
         }
 
         const float intensity = this->get_intensity(i);
+        reading.dark = this->get_dark_reading(i);
+        reading.saturated = this->get_raw_intensity(i) + reading.dark >= this->max_reading;
 
-        const float distance = intensity >= this->noise_floor ?
-                                   this->to_distance(i, std::min(intensity, this->max_reading)) :
-                                   this->max_distance;
+        const float distance = intensity >= this->noise_floor ? this->to_distance(i, intensity) : this->max_distance;
 
         reading.valid = distance < this->max_distance;
-        reading.dark = this->get_dark_reading(i);
         reading.blind = reading.dark >= this->blind_reading;
         reading.distance = this->fast_filters.at(i).update(std::min(distance, this->max_distance));
         reading.slow_distance = this->slow_filters.at(i).update(std::min(distance, this->max_distance));
