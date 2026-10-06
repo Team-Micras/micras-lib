@@ -25,6 +25,10 @@ Localizer::Localizer(const Config& config) : config{config}, rolling_radius{conf
     });
 }
 
+void Localizer::set_gyroscope_scale(float scale) {
+    this->config.model.gyroscope_scale = scale;
+}
+
 void Localizer::reset(const Pose& pose, const Measurements& measurements) {
     const float bias_variance = this->get_variance(bias_index);
 

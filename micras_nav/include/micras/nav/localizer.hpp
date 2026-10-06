@@ -136,6 +136,15 @@ public:
      * @param pose The pose of the robot in the maze frame.
      * @param measurements The current measurements, which give the reference for the encoders.
      */
+    /**
+     * @brief Replace the scale the angular rate of the gyroscope is multiplied by.
+     *
+     * @note For a scale measured on the robot, which replaces the one of the robot model.
+     *
+     * @param scale The scale.
+     */
+    void set_gyroscope_scale(float scale);
+
     void reset(const Pose& pose, const Measurements& measurements);
 
     /**

@@ -24,6 +24,7 @@ TWallSensors<num_of_sensors>::TWallSensors(const Config& config) :
     fast_filters{core::make_array<core::ButterworthFilter, num_of_sensors>(config.fast_filter)},
     slow_filters{core::make_array<core::ButterworthFilter, num_of_sensors>(config.slow_filter)},
     reference_readings{config.reference_readings},
+    offsets{config.offsets},
     reference_distances{config.reference_distances},
     receiver_offset{config.receiver_offset},
     receiver_half_angle{config.receiver_half_angle},
@@ -160,8 +161,10 @@ void TWallSensors<num_of_sensors>::update() {
             continue;
         }
 
-        calibration.sum += intensity;
-        calibration.squared_sum += intensity * intensity;
+        const float sample = calibration.offset ? this->get_raw_intensity(i) : intensity;
+
+        calibration.sum += sample;
+        calibration.squared_sum += sample * sample;
         calibration.samples_left--;
 
         if (calibration.samples_left == 0) {
@@ -170,7 +173,12 @@ void TWallSensors<num_of_sensors>::update() {
                 calibration.squared_sum / static_cast<float>(this->calibration_samples) - mean * mean;
 
             calibration.spread = mean > 0.0F ? std::sqrt(std::max(variance, 0.0F)) / mean : 0.0F;
-            this->reference_readings.at(i) = std::max(mean, this->noise_floor);
+
+            if (calibration.offset) {
+                this->offsets.at(i) = mean;
+            } else {
+                this->reference_readings.at(i) = std::max(mean, this->noise_floor);
+            }
         }
     }
 }
@@ -188,6 +196,11 @@ bool TWallSensors<num_of_sensors>::get_wall(uint8_t sensor_index) const {
 
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_intensity(uint8_t sensor_index) const {
+    return std::max(this->get_raw_intensity(sensor_index) - this->offsets.at(sensor_index), 0.0F);
+}
+
+template <uint8_t num_of_sensors>
+float TWallSensors<num_of_sensors>::get_raw_intensity(uint8_t sensor_index) const {
     return static_cast<float>(std::abs(this->scans.at(sensor_index) - this->scans.at(sensor_index + num_of_sensors))) /
            this->adc.get_max_reading();
 }
@@ -205,6 +218,18 @@ void TWallSensors<num_of_sensors>::calibrate_sensor(uint8_t sensor_index) {
         .squared_sum = 0.0F,
         .samples_left = this->calibration_samples,
         .spread = 0.0F,
+        .offset = false,
+    };
+}
+
+template <uint8_t num_of_sensors>
+void TWallSensors<num_of_sensors>::calibrate_offset(uint8_t sensor_index) {
+    this->calibrations.at(sensor_index) = {
+        .sum = 0.0F,
+        .squared_sum = 0.0F,
+        .samples_left = this->calibration_samples,
+        .spread = 0.0F,
+        .offset = true,
     };
 }
 
@@ -218,6 +243,21 @@ bool TWallSensors<num_of_sensors>::is_calibrating() const {
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_reference_reading(uint8_t sensor_index) const {
     return this->reference_readings.at(sensor_index);
+}
+
+template <uint8_t num_of_sensors>
+void TWallSensors<num_of_sensors>::set_reference_reading(uint8_t sensor_index, float reading) {
+    this->reference_readings.at(sensor_index) = reading;
+}
+
+template <uint8_t num_of_sensors>
+float TWallSensors<num_of_sensors>::get_offset(uint8_t sensor_index) const {
+    return this->offsets.at(sensor_index);
+}
+
+template <uint8_t num_of_sensors>
+void TWallSensors<num_of_sensors>::set_offset(uint8_t sensor_index, float offset) {
+    this->offsets.at(sensor_index) = offset;
 }
 
 template <uint8_t num_of_sensors>

@@ -48,7 +48,10 @@ public:
      * receiver offset is the distance from the optical axis of the emitter to the receiver, and the
      * receiver half angle the angle off its own axis at which the receiver's sensitivity halves. A
      * dark reading, taken with the emitter off, at or above the blind reading means that ambient
-     * light saturates the receiver, which then cannot see a wall with the emitter on either.
+     * light saturates the receiver, which then cannot see a wall with the emitter on either. The
+     * offset of a sensor is what it reads with nothing in front of it, the light its own emitter
+     * and its neighbors put into the receiver without leaving the robot, and is subtracted from
+     * every reading; its calibration, with the robot held up in open air, replaces it.
      */
     struct Config {
         hal::AdcDma::Config                          adc;
@@ -57,6 +60,7 @@ public:
         core::ButterworthFilter::Config              fast_filter;
         core::ButterworthFilter::Config              slow_filter;
         std::array<float, num_of_sensors>            reference_readings;
+        std::array<float, num_of_sensors>            offsets;
         std::array<float, num_of_sensors>            reference_distances;
         float                                        receiver_offset;
         float                                        receiver_half_angle;
@@ -143,7 +147,8 @@ public:
     bool get_wall(uint8_t sensor_index) const;
 
     /**
-     * @brief Get the light a sensor receives from its emitter, with the ambient light removed.
+     * @brief Get the light a sensor receives from its emitter, with the ambient light and its offset
+     * removed.
      *
      * @param sensor_index Index of the sensor.
      * @return Reading from the sensor from 0 to 1.
@@ -172,6 +177,17 @@ public:
     void calibrate_sensor(uint8_t sensor_index);
 
     /**
+     * @brief Start measuring the offset of a sensor, with nothing in front of it.
+     *
+     * @note The readings, without the offset taken off, are averaged over the configured number of
+     * samples, and their mean becomes the offset. The robot has to be held where no wall or floor
+     * is within the range of the sensors.
+     *
+     * @param sensor_index Index of the sensor.
+     */
+    void calibrate_offset(uint8_t sensor_index);
+
+    /**
      * @brief Check if a calibration is in progress.
      *
      * @return True while any sensor is still averaging.
@@ -185,6 +201,30 @@ public:
      * @return The reading at the reference distance, from 0 to 1.
      */
     float get_reference_reading(uint8_t sensor_index) const;
+
+    /**
+     * @brief Replace the reference reading of a sensor, as a calibration would.
+     *
+     * @param sensor_index Index of the sensor.
+     * @param reading The reading at the reference distance, from 0 to 1.
+     */
+    void set_reference_reading(uint8_t sensor_index, float reading);
+
+    /**
+     * @brief Get the offset of a sensor, which is subtracted from its readings.
+     *
+     * @param sensor_index Index of the sensor.
+     * @return The reading with nothing in front of the sensor, from 0 to 1.
+     */
+    float get_offset(uint8_t sensor_index) const;
+
+    /**
+     * @brief Replace the offset of a sensor, as its calibration would.
+     *
+     * @param sensor_index Index of the sensor.
+     * @param offset The reading with nothing in front of the sensor, from 0 to 1.
+     */
+    void set_offset(uint8_t sensor_index, float offset);
 
     /**
      * @brief Get how much the readings varied during the last calibration of a sensor.
@@ -244,7 +284,16 @@ private:
         float    squared_sum;
         uint16_t samples_left;
         float    spread;
+        bool     offset;
     };
+
+    /**
+     * @brief Get the reading of a sensor before its offset is taken off.
+     *
+     * @param sensor_index Index of the sensor.
+     * @return The difference between its lit and dark scans, as a fraction of the full scale.
+     */
+    float get_raw_intensity(uint8_t sensor_index) const;
 
     /**
      * @brief ADC DMA handle.
@@ -310,6 +359,11 @@ private:
      * @brief Reading of each sensor at its reference distance.
      */
     std::array<float, num_of_sensors> reference_readings;
+
+    /**
+     * @brief Reading of each sensor with nothing in front of it, subtracted from its readings.
+     */
+    std::array<float, num_of_sensors> offsets;
 
     /**
      * @brief Distance each sensor was calibrated at.
