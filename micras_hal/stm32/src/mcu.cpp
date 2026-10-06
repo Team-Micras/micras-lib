@@ -41,9 +41,14 @@ static constexpr uint32_t watchdog_max_reload{0xFFF};
 /**
  * @brief Time to wait for the watchdog registers to take effect before giving up.
  *
- * @note Bounded so that a low speed oscillator that never starts cannot hang the boot.
+ * @note An update of the prescaler or of the reload value takes up to five periods of the
+ * prescaled clock of the watchdog, 40 ms at its largest divider of 256 from the 32 kHz oscillator,
+ * and a refresh before it ends reloads the previous value: a window asked for as 30 s then lasts as
+ * little as the previous reload at the new divider. This covers five such periods with the
+ * oscillator at its slowest, and is bounded so that an oscillator that never starts cannot hang
+ * the boot.
  */
-static constexpr uint32_t watchdog_timeout_us{1000};
+static constexpr uint32_t watchdog_timeout_us{60000};
 
 /**
  * @brief Compare value that keeps an inverted PWM output inactive, above any period.
@@ -112,21 +117,22 @@ void Mcu::set_watchdog_timeout(uint32_t timeout_ms) {
     const uint32_t reload = std::clamp<uint32_t>(ticks, 1, watchdog_max_reload + 1) - 1;
 
     IWDG_TypeDef* const watchdog = family::watchdog();
+    const uint32_t      limit = Timer::to_cycles(watchdog_timeout_us);
+
+    const auto wait_for_update = [watchdog, limit] {
+        const uint32_t start = Timer::get_counter();
+
+        while ((watchdog->SR & (IWDG_SR_PVU | IWDG_SR_RVU)) != 0 and Timer::get_counter() - start <= limit) {
+            refresh_watchdog();
+        }
+    };
 
     watchdog->KR = watchdog_key_start;
+    wait_for_update();
     watchdog->KR = watchdog_key_write;
     watchdog->PR = prescaler;
     watchdog->RLR = reload;
-
-    const uint32_t start = Timer::get_counter();
-    const uint32_t limit = Timer::to_cycles(watchdog_timeout_us);
-
-    while ((watchdog->SR & (IWDG_SR_PVU | IWDG_SR_RVU)) != 0) {
-        if (Timer::get_counter() - start > limit) {
-            break;
-        }
-    }
-
+    wait_for_update();
     refresh_watchdog();
 }
 
