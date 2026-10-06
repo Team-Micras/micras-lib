@@ -146,6 +146,7 @@ void TWallSensors<num_of_sensors>::build_table() {
 
 template <uint8_t num_of_sensors>
 bool TWallSensors<num_of_sensors>::synchronize(bool restart) {
+    this->has_previous_frame = false;
     this->build_table();
 
     const bool armed = this->burst.arm(this->first_row, this->second_row, this->table);
@@ -158,6 +159,23 @@ bool TWallSensors<num_of_sensors>::synchronize(bool restart) {
 
     this->burst.start();
     return armed and converting;
+}
+
+template <uint8_t num_of_sensors>
+float TWallSensors<num_of_sensors>::get_dark_counts_at(uint8_t sensor_index, uint8_t end) const {
+    const float current = this->get_dark_counts(sensor_index);
+
+    if (not this->has_previous_frame) {
+        return current;
+    }
+
+    const uint8_t current_end = this->dark_end_of.at(this->frame);
+    const auto    previous = static_cast<float>(
+        this->scans.at(static_cast<std::size_t>(this->dark_end_of.at(1 - this->frame) * num_of_sensors + sensor_index))
+    );
+    const float ends_before = static_cast<float>(current_end - end) / static_cast<float>(scans_per_frame);
+
+    return current - (current - previous) * ends_before;
 }
 
 template <uint8_t num_of_sensors>
@@ -277,7 +295,8 @@ void TWallSensors<num_of_sensors>::update() {
             const float variance =
                 calibration.squared_sum / static_cast<float>(this->calibration_samples) - mean * mean;
 
-            calibration.spread = mean > 0.0F ? std::sqrt(std::max(variance, 0.0F)) / mean : 0.0F;
+            calibration.deviation = std::sqrt(std::max(variance, 0.0F));
+            calibration.spread = mean > 0.0F ? calibration.deviation / mean : 0.0F;
 
             if (calibration.offset) {
                 this->offsets.at(i) = mean;
@@ -285,6 +304,10 @@ void TWallSensors<num_of_sensors>::update() {
                 this->reference_readings.at(i) = std::max(mean, this->noise_floor);
             }
         }
+    }
+
+    if (is_new) {
+        this->has_previous_frame = true;
     }
 }
 
@@ -311,10 +334,10 @@ float TWallSensors<num_of_sensors>::get_raw_intensity(uint8_t sensor_index) cons
 
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_crosstalk(uint8_t emitter, uint8_t receiver) const {
-    const auto lit = static_cast<float>(
-        this->scans.at(static_cast<std::size_t>(this->lit_end.at(this->frame).at(emitter) * num_of_sensors + receiver))
-    );
-    return (lit - this->get_dark_counts(receiver)) / this->adc.get_max_reading();
+    const uint8_t end = this->lit_end.at(this->frame).at(emitter);
+    const auto    lit = static_cast<float>(this->scans.at(static_cast<std::size_t>(end * num_of_sensors + receiver)));
+
+    return (lit - this->get_dark_counts_at(receiver, end)) / this->adc.get_max_reading();
 }
 
 template <uint8_t num_of_sensors>
@@ -329,6 +352,7 @@ void TWallSensors<num_of_sensors>::calibrate_sensor(uint8_t sensor_index) {
         .squared_sum = 0.0F,
         .samples_left = this->calibration_samples,
         .spread = 0.0F,
+        .deviation = 0.0F,
         .offset = false,
     };
 }
@@ -340,6 +364,7 @@ void TWallSensors<num_of_sensors>::calibrate_offset(uint8_t sensor_index) {
         .squared_sum = 0.0F,
         .samples_left = this->calibration_samples,
         .spread = 0.0F,
+        .deviation = 0.0F,
         .offset = true,
     };
 }
@@ -374,6 +399,11 @@ void TWallSensors<num_of_sensors>::set_offset(uint8_t sensor_index, float offset
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_calibration_spread(uint8_t sensor_index) const {
     return this->calibrations.at(sensor_index).spread;
+}
+
+template <uint8_t num_of_sensors>
+float TWallSensors<num_of_sensors>::get_calibration_deviation(uint8_t sensor_index) const {
+    return this->calibrations.at(sensor_index).deviation;
 }
 
 template <uint8_t num_of_sensors>

@@ -263,6 +263,17 @@ public:
     float get_calibration_spread(uint8_t sensor_index) const;
 
     /**
+     * @brief Get the standard deviation of the readings during the last calibration of a sensor.
+     *
+     * @note The spread divides it by the mean, which says nothing of a calibration whose mean is
+     * close to zero, such as that of an offset.
+     *
+     * @param sensor_index Index of the sensor.
+     * @return The standard deviation, as a fraction of the full scale.
+     */
+    float get_calibration_deviation(uint8_t sensor_index) const;
+
+    /**
      * @brief Check if the ADC was initialized, its scan matches the buffer layout, and the emitters
      * run at the rate the filters were designed for.
      *
@@ -323,6 +334,21 @@ private:
     float get_dark_counts(uint8_t sensor_index) const;
 
     /**
+     * @brief Get a receiver's dark reading at the time of an end of the last frame.
+     *
+     * @note Interpolated between the dark end of the frame before and that of the last one, which
+     * come before and after every lit end of the last frame: ambient light that changes during a
+     * frame, such as a lamp flickering at twice the mains frequency, then cancels to first order
+     * instead of reading as light of the emitter. The first frame after a start has no frame
+     * before it, and takes its own dark end.
+     *
+     * @param sensor_index Index of the sensor.
+     * @param end End of the cycle the reading is wanted at.
+     * @return The dark reading, in counts of the converter.
+     */
+    float get_dark_counts_at(uint8_t sensor_index, uint8_t end) const;
+
+    /**
      * @brief Number of distances the shape of the reading is tabulated at.
      */
     static constexpr uint8_t shape_points{64};
@@ -352,6 +378,7 @@ private:
         float    squared_sum;
         uint16_t samples_left;
         float    spread;
+        float    deviation;
         bool     offset;
     };
 
@@ -398,9 +425,13 @@ private:
     ///@}
 
     /**
-     * @brief Frame the readings were last computed from.
+     * @brief Frame the readings were last computed from, and whether the frame before it holds
+     * readings too.
      */
+    ///@{
     uint8_t frame{};
+    bool    has_previous_frame{};
+    ///@}
 
     /**
      * @brief Whether the emitter of each sensor takes its turn.
