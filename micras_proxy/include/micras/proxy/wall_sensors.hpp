@@ -11,6 +11,7 @@
 #include "micras/core/butterworth_filter.hpp"
 #include "micras/hal/adc_dma.hpp"
 #include "micras/hal/pwm.hpp"
+#include "micras/hal/timer_burst.hpp"
 
 namespace micras::proxy {
 /**
@@ -29,6 +30,16 @@ namespace micras::proxy {
  * offset this is the inverse square law, distance = reference_distance * sqrt(reference_reading /
  * reading). With one, the reading peaks at a short distance and falls again closer than that, so a
  * reading above the peak is reported as the distance of the peak, as a saturated one is.
+ *
+ * @details The emitters take turns, one at a time, and the receivers are read with none of them
+ * lit too, so that a reading is the light of its own emitter alone with the ambient light taken
+ * off, and nothing that a neighbor's emitter puts into the receiver, inside the robot or off a wall.
+ * The emitter timer counts up and down and converts every receiver at both ends of its count; an
+ * emitter whose output is inverted is centered on the overflow, the others on the underflow. The
+ * update DMA request of the timer reloads the compare registers at every end, so that each end
+ * lights one emitter or none: the ends alternate between the two kinds, and a cycle is one end per
+ * emitter and one of each kind with none lit, num_of_sensors + 2 ends. Nothing in the program
+ * triggers or times any of it.
  *
  * @tparam num_of_sensors Number of sensors.
  */
@@ -56,6 +67,7 @@ public:
     struct Config {
         hal::AdcDma::Config                          adc;
         std::array<hal::Pwm::Config, num_of_sensors> led_pwms;
+        hal::TimerBurst::Config                      burst;
         float                                        emitter_duty_cycle;
         core::ButterworthFilter::Config              fast_filter;
         core::ButterworthFilter::Config              slow_filter;
@@ -158,8 +170,8 @@ public:
     /**
      * @brief Get the reading of a sensor with its emitter off, as a fraction of the full scale.
      *
-     * @note Ambient light raises the output of the receiver, and the emitter raises it further, so
-     * the dark reading is the lower of the pair.
+     * @note The mean of the scans at the ends of the cycle where no emitter is lit, which is the
+     * ambient light the receiver sees.
      *
      * @param sensor_index Index of the sensor.
      * @return The dark reading.
@@ -201,6 +213,18 @@ public:
      * @return The reading at the reference distance, from 0 to 1.
      */
     float get_reference_reading(uint8_t sensor_index) const;
+
+    /**
+     * @brief Get the light an emitter puts into a receiver, with the ambient light removed.
+     *
+     * @note Read from the scan in which that emitter alone is lit, so it is what the reading of the
+     * receiver would hold if the emitters did not take turns. The offset is not taken off.
+     *
+     * @param emitter Index of the sensor whose emitter is lit.
+     * @param receiver Index of the sensor whose receiver is read.
+     * @return The light, as a fraction of the full scale.
+     */
+    float get_crosstalk(uint8_t emitter, uint8_t receiver) const;
 
     /**
      * @brief Replace the reference reading of a sensor, as a calibration would.
@@ -253,6 +277,45 @@ private:
      * @brief Largest relative difference between the rate of the emitters and the one of the filters.
      */
     static constexpr float frequency_tolerance{0.01F};
+
+    /**
+     * @brief Number of ends of the count of the emitter timer in a cycle, each of which is a scan.
+     */
+    static constexpr uint8_t scans_per_cycle{num_of_sensors + 2};
+
+    /**
+     * @brief Mark of an end at which no emitter is lit.
+     */
+    static constexpr uint8_t dark_end{0xFF};
+
+    /**
+     * @brief Assign every emitter to an end of the cycle, by the kind of end its output is centered on.
+     *
+     * @param config Configuration for the wall sensors.
+     * @return True if half of the emitters are inverted, which the alternating ends need.
+     */
+    bool assign_ends(const Config& config);
+
+    /**
+     * @brief Write the compare values of every half of the cycle into the table of the timer.
+     */
+    void build_table();
+
+    /**
+     * @brief Start the emitter timer and the converter together, from the start of a cycle.
+     *
+     * @param restart Whether the converter was converting, and has to be stopped first.
+     * @return True if both started.
+     */
+    bool synchronize(bool restart);
+
+    /**
+     * @brief Get the mean of a receiver's readings at the ends where no emitter is lit.
+     *
+     * @param sensor_index Index of the sensor.
+     * @return The dark reading, in counts of the converter.
+     */
+    float get_dark_counts(uint8_t sensor_index) const;
 
     /**
      * @brief Number of distances the shape of the reading is tabulated at.
@@ -311,37 +374,62 @@ private:
     float emitter_duty_cycle;
 
     /**
-     * @brief Buffer the DMA writes to, holding one emitter on and one emitter off scan.
+     * @brief Timer burst that reloads the compare registers of the emitters at every end.
+     */
+    hal::TimerBurst burst;
+
+    /**
+     * @brief Emitter lit at each end of the cycle, or dark_end.
+     */
+    std::array<uint8_t, scans_per_cycle> ends{};
+
+    /**
+     * @brief End of the cycle at which the emitter of each sensor is lit.
+     */
+    std::array<uint8_t, num_of_sensors> lit_end{};
+
+    /**
+     * @brief Whether the emitter of each sensor takes its turn.
+     */
+    std::array<bool, num_of_sensors> emitting{};
+
+    /**
+     * @brief Compare values in force until the first end and from it to the second, and those the
+     * update DMA request loads at every end, a row of one value per emitter for each.
+     */
+    ///@{
+    std::array<uint32_t, num_of_sensors>                   first_row{};
+    std::array<uint32_t, num_of_sensors>                   second_row{};
+    std::array<uint32_t, scans_per_cycle * num_of_sensors> table{};
+    ///@}
+
+    /**
+     * @brief Buffer the DMA writes to, holding one scan of every receiver per end of a cycle.
      *
-     * @details The emitter PWM timer is center aligned and triggers the ADC on its update event, so
-     * the conversion sequence runs twice per emitter period: once at the underflow and once at the
-     * overflow. The emitters fire in two groups, one centered on each of those instants, so every
-     * scan reads half of the sensors lit and the other half dark, no sensor is ever lit by the
-     * emitter of its neighbor, and two consecutive scans hold a lit and a dark reading of every
-     * sensor. Their difference is the reflected signal with the ambient light canceled, and taking
-     * its absolute value makes the result independent of which half currently holds which scan.
+     * @details Scan k is the one at end k of the cycle, the first end being the first overflow
+     * after the timer starts, and the receiver of sensor i is rank i of each scan.
      *
      * @note This depends on the ADC scanning exactly num_of_sensors channels, on the emitter timer
-     * being center aligned with its trigger on the update event, on the two groups being told
-     * apart by the inverted flag of their PWM configuration, and on the emitter being on for at
-     * least the settling time of the receiver before the scan starts and the duration of the scan
-     * after it. The first of those is checked by the constructor; the others live in the
+     * being center aligned with its trigger and its DMA request on the update event, and on an
+     * emitter being on for at least the settling time of the receiver before the scan starts and the
+     * duration of the scan after it, while the ends stay far enough apart for the receiver to go
+     * dark again. The first of those is checked by the constructor; the others live in the
      * configuration.
      */
-    std::array<uint16_t, 2 * num_of_sensors> buffer{};
+    std::array<uint16_t, scans_per_cycle * num_of_sensors> buffer{};
 
     /**
-     * @brief Copy of the buffer taken when a pair of scans completes, so that a pair is never torn.
+     * @brief Copy of the buffer taken when a cycle completes, so that a cycle is never torn.
      */
-    std::array<uint16_t, 2 * num_of_sensors> snapshot{};
+    std::array<uint16_t, scans_per_cycle * num_of_sensors> snapshot{};
 
     /**
-     * @brief The pair of scans the readings are computed from.
+     * @brief The cycle of scans the readings are computed from.
      */
-    std::array<uint16_t, 2 * num_of_sensors> scans{};
+    std::array<uint16_t, scans_per_cycle * num_of_sensors> scans{};
 
     /**
-     * @brief Number of pairs of scans completed when the readings were last computed.
+     * @brief Number of cycles completed when the readings were last computed.
      */
     uint32_t sequence{};
 

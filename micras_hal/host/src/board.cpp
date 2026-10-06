@@ -33,16 +33,17 @@ using SpiKey = std::tuple<const void*, const void*, uint16_t>;
  * @brief Every port and name, created on first use.
  */
 struct Registry {
-    std::map<Key, GpioPort>            gpios;
-    std::map<Key, PwmPort>             pwms;
-    std::map<Key, PwmDmaPort>          pwm_dmas;
-    std::map<const void*, AdcPort>     adcs;
-    std::map<const void*, UartPort>    uarts;
-    std::map<const void*, EncoderPort> encoders;
-    std::map<SpiKey, SpiPort>          spis;
-    std::map<const void*, FmacPort>    fmacs;
-    std::map<Key, std::string>         gpio_names;
-    std::map<const void*, std::string> handle_names;
+    std::map<Key, GpioPort>               gpios;
+    std::map<Key, PwmPort>                pwms;
+    std::map<Key, PwmDmaPort>             pwm_dmas;
+    std::map<const void*, TimerBurstPort> timer_bursts;
+    std::map<const void*, AdcPort>        adcs;
+    std::map<const void*, UartPort>       uarts;
+    std::map<const void*, EncoderPort>    encoders;
+    std::map<SpiKey, SpiPort>             spis;
+    std::map<const void*, FmacPort>       fmacs;
+    std::map<Key, std::string>            gpio_names;
+    std::map<const void*, std::string>    handle_names;
     FlashPort flash{{.name = "flash", .touched = false, .bound = false}, {}, std::numeric_limits<uint32_t>::max()};
     McuPort   mcu{{.name = "mcu", .touched = false, .bound = false}, 0, 0, 0, 0};
 };
@@ -119,6 +120,12 @@ PwmDmaPort& Board::pwm_dma(const void* timer, uint32_t channel) {
     });
 }
 
+TimerBurstPort& Board::timer_burst(const void* timer) {
+    return find_or_create(registry().timer_bursts, timer, [timer] {
+        return std::format("{} update DMA", handle_name(timer));
+    });
+}
+
 AdcPort& Board::adc(const void* adc) {
     return find_or_create(registry().adcs, adc, [adc] { return handle_name(adc); });
 }
@@ -185,6 +192,7 @@ std::vector<std::string> Board::unbound() {
     collect(registry().gpios);
     collect(registry().pwms);
     collect(registry().pwm_dmas);
+    collect(registry().timer_bursts);
     collect(registry().adcs);
     collect(registry().uarts);
     collect(registry().encoders);
