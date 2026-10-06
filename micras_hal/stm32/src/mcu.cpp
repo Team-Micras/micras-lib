@@ -50,11 +50,22 @@ static constexpr uint32_t watchdog_timeout_us{1000};
  */
 static constexpr uint32_t inactive_compare{0xFFFFFFFF};
 
-bool Mcu::watchdog_reset{};
-bool Mcu::cpu_frequency_supported{};
+bool     Mcu::watchdog_reset{};
+bool     Mcu::cpu_frequency_supported{};
+uint32_t Mcu::reset_flags{};
+uint32_t Mcu::previous_trace{};
+
+/**
+ * @brief Mark left by set_trace, in memory the startup code neither loads nor clears.
+ */
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables) it outlives the program on purpose
+__attribute__((noinit)) static volatile uint32_t trace;
 
 void Mcu::init(const Config& config) {
     watchdog_reset = family::was_reset_by_watchdog();
+    reset_flags = family::reset_flags();
+    previous_trace = family::was_powered_on() ? 0 : trace;
+    trace = 0;
     __HAL_RCC_CLEAR_RESET_FLAGS();
 
     family::enable_caches();
@@ -129,5 +140,17 @@ bool Mcu::was_reset_by_watchdog() {
 
 bool Mcu::is_cpu_frequency_supported() {
     return cpu_frequency_supported;
+}
+
+uint32_t Mcu::get_reset_flags() {
+    return reset_flags;
+}
+
+void Mcu::set_trace(uint32_t mark) {
+    trace = mark;
+}
+
+uint32_t Mcu::get_previous_trace() {
+    return previous_trace;
 }
 }  // namespace micras::hal

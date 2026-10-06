@@ -252,6 +252,18 @@ void TWallSensors<num_of_sensors>::update() {
 
     this->sequence = current_sequence;
 
+    if (is_new) {
+        for (uint8_t emitter = 0; emitter < num_of_sensors; emitter++) {
+            for (uint8_t receiver = 0; receiver < num_of_sensors; receiver++) {
+                const float now = this->get_frame_light(emitter, receiver);
+                float&      before = this->frame_light.at(emitter).at(receiver);
+
+                this->light.at(emitter).at(receiver) = this->has_previous_frame ? 0.5F * (now + before) : now;
+                before = now;
+            }
+        }
+    }
+
     for (uint8_t i = 0; i < num_of_sensors; i++) {
         Reading& reading = this->readings.at(i);
         reading.is_new = is_new;
@@ -334,6 +346,11 @@ float TWallSensors<num_of_sensors>::get_raw_intensity(uint8_t sensor_index) cons
 
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_crosstalk(uint8_t emitter, uint8_t receiver) const {
+    return this->light.at(emitter).at(receiver);
+}
+
+template <uint8_t num_of_sensors>
+float TWallSensors<num_of_sensors>::get_frame_light(uint8_t emitter, uint8_t receiver) const {
     const uint8_t end = this->lit_end.at(this->frame).at(emitter);
     const auto    lit = static_cast<float>(this->scans.at(static_cast<std::size_t>(end * num_of_sensors + receiver)));
 

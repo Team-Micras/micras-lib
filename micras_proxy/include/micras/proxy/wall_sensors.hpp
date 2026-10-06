@@ -219,7 +219,10 @@ public:
      * @brief Get the light an emitter puts into a receiver, with the ambient light removed.
      *
      * @note Read from the scan in which that emitter alone is lit, so it is what the reading of the
-     * receiver would hold if the emitters did not take turns. The offset is not taken off.
+     * receiver would hold if the emitters did not take turns. The offset is not taken off. Like
+     * every reading, it is the mean of the last two frames, which light the emitters in different
+     * orders: the emitter lit before another disturbs its scan a little through the supply, and
+     * differently in each frame, so a single frame would alternate between two values.
      *
      * @param emitter Index of the sensor whose emitter is lit.
      * @param receiver Index of the sensor whose receiver is read.
@@ -349,6 +352,15 @@ private:
     float get_dark_counts_at(uint8_t sensor_index, uint8_t end) const;
 
     /**
+     * @brief Get the light an emitter put into a receiver in the last frame alone.
+     *
+     * @param emitter Index of the sensor whose emitter is lit.
+     * @param receiver Index of the sensor whose receiver is read.
+     * @return The light, as a fraction of the full scale.
+     */
+    float get_frame_light(uint8_t emitter, uint8_t receiver) const;
+
+    /**
      * @brief Number of distances the shape of the reading is tabulated at.
      */
     static constexpr uint8_t shape_points{64};
@@ -422,6 +434,15 @@ private:
     ///@{
     std::array<std::array<uint8_t, num_of_sensors>, 2> lit_end{};
     std::array<uint8_t, 2>                             dark_end_of{};
+    ///@}
+
+    /**
+     * @brief Light of every emitter in every receiver, in the last frame and as the mean of the last
+     * two, indexed by emitter and then by receiver.
+     */
+    ///@{
+    std::array<std::array<float, num_of_sensors>, num_of_sensors> frame_light{};
+    std::array<std::array<float, num_of_sensors>, num_of_sensors> light{};
     ///@}
 
     /**
