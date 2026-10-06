@@ -95,4 +95,8 @@ void Mcu::set_trace(uint32_t /*mark*/) { }
 uint32_t Mcu::get_previous_trace() {
     return 0;
 }
+
+uint32_t Mcu::get_fault_status() {
+    return 0;
+}
 }  // namespace micras::hal

@@ -136,6 +136,13 @@ public:
      */
     static uint32_t get_previous_trace();
 
+    /**
+     * @brief Get the status of the last fault of the core.
+     *
+     * @return The configurable fault status register, or zero where there is none.
+     */
+    static uint32_t get_fault_status();
+
 private:
     /**
      * @brief Reset flags of the last reset, and the mark left before it.

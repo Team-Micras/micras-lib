@@ -14,6 +14,7 @@
 #include "micras/core/serializable.hpp"
 #include "micras/core/variable_pool.hpp"
 #include "micras/hal/flash.hpp"
+#include "micras/hal/mcu.hpp"
 #include "micras/proxy/storage.hpp"
 
 namespace micras::proxy {
@@ -183,9 +184,13 @@ bool Storage::save(const core::VariablePool& pool) {
         return false;
     }
 
+    hal::Mcu::set_trace(std::to_underlying(Stage::ERASING));
+
     if (hal::Flash::erase_sectors(this->start_sector, this->number_of_sectors) != hal::Flash::Status::OK) {
         return false;
     }
+
+    hal::Mcu::set_trace(std::to_underlying(Stage::WRITING_BODY));
 
     if (hal::Flash::write(this->start_sector, header_size, body) != hal::Flash::Status::OK) {
         return false;
@@ -199,10 +204,13 @@ bool Storage::save(const core::VariablePool& pool) {
     append_uint16(header, body.size() / hal::FlashWord::size);
     header.resize(header_size, hal::FlashWord::erased_value);
 
+    hal::Mcu::set_trace(std::to_underlying(Stage::WRITING_HEADER));
+
     if (hal::Flash::write(this->start_sector, 0, header) != hal::Flash::Status::OK) {
         return false;
     }
 
+    hal::Mcu::set_trace(std::to_underlying(Stage::LOADING));
     this->load();
     return this->valid;
 }

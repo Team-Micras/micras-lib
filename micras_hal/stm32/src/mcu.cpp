@@ -153,4 +153,8 @@ void Mcu::set_trace(uint32_t mark) {
 uint32_t Mcu::get_previous_trace() {
     return previous_trace;
 }
+
+uint32_t Mcu::get_fault_status() {
+    return SCB->CFSR;
+}
 }  // namespace micras::hal
