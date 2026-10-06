@@ -37,9 +37,10 @@ namespace micras::proxy {
  * The emitter timer counts up and down and converts every receiver at both ends of its count; an
  * emitter whose output is inverted is centered on the overflow, the others on the underflow. The
  * update DMA request of the timer reloads the compare registers at every end, so that each end
- * lights one emitter or none: the ends alternate between the two kinds, and a cycle is one end per
- * emitter and one of each kind with none lit, num_of_sensors + 2 ends. Nothing in the program
- * triggers or times any of it.
+ * lights one emitter or none. A frame is one end per emitter and one with none lit, which gives a
+ * reading of every sensor; it is an odd number of ends, so the kind of end each position falls on
+ * swaps from one frame to the next, and the order of the emitters with it, and the cycle the table
+ * repeats is two frames. Nothing in the program triggers or times any of it.
  *
  * @tparam num_of_sensors Number of sensors.
  */
@@ -279,9 +280,13 @@ private:
     static constexpr float frequency_tolerance{0.01F};
 
     /**
-     * @brief Number of ends of the count of the emitter timer in a cycle, each of which is a scan.
+     * @brief Number of ends of the count of the emitter timer in a frame and in a cycle, each of
+     * which is a scan.
      */
-    static constexpr uint8_t scans_per_cycle{num_of_sensors + 2};
+    ///@{
+    static constexpr uint8_t scans_per_frame{num_of_sensors + 1};
+    static constexpr uint8_t scans_per_cycle{2 * scans_per_frame};
+    ///@}
 
     /**
      * @brief Mark of an end at which no emitter is lit.
@@ -310,7 +315,7 @@ private:
     bool synchronize(bool restart);
 
     /**
-     * @brief Get the mean of a receiver's readings at the ends where no emitter is lit.
+     * @brief Get a receiver's reading at the end of the last frame where no emitter is lit.
      *
      * @param sensor_index Index of the sensor.
      * @return The dark reading, in counts of the converter.
@@ -384,9 +389,18 @@ private:
     std::array<uint8_t, scans_per_cycle> ends{};
 
     /**
-     * @brief End of the cycle at which the emitter of each sensor is lit.
+     * @brief End of the cycle at which the emitter of each sensor is lit, and the one no emitter is
+     * lit at, in each frame.
      */
-    std::array<uint8_t, num_of_sensors> lit_end{};
+    ///@{
+    std::array<std::array<uint8_t, num_of_sensors>, 2> lit_end{};
+    std::array<uint8_t, 2>                             dark_end_of{};
+    ///@}
+
+    /**
+     * @brief Frame the readings were last computed from.
+     */
+    uint8_t frame{};
 
     /**
      * @brief Whether the emitter of each sensor takes its turn.
@@ -407,7 +421,8 @@ private:
      * @brief Buffer the DMA writes to, holding one scan of every receiver per end of a cycle.
      *
      * @details Scan k is the one at end k of the cycle, the first end being the first overflow
-     * after the timer starts, and the receiver of sensor i is rank i of each scan.
+     * after the timer starts, and the receiver of sensor i is rank i of each scan. Each half of
+     * the buffer is a frame, which the converter's DMA copies to the snapshot as soon as it is full.
      *
      * @note This depends on the ADC scanning exactly num_of_sensors channels, on the emitter timer
      * being center aligned with its trigger and its DMA request on the update event, and on an
@@ -429,7 +444,7 @@ private:
     std::array<uint16_t, scans_per_cycle * num_of_sensors> scans{};
 
     /**
-     * @brief Number of cycles completed when the readings were last computed.
+     * @brief Number of frames completed when the readings were last computed.
      */
     uint32_t sequence{};
 

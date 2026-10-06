@@ -83,11 +83,17 @@ public:
      *
      * @note Both buffers are borrowed and have to outlive the conversions.
      *
+     * @note With halves, each half of the buffer is a sequence of its own: the half transfer
+     * interrupt copies the first half and the transfer complete interrupt the second, each counting
+     * a sequence, so a buffer of two sequences gives a new one twice per pass. The same interrupt
+     * of the DMA stream serves both.
+     *
      * @param buffer 16 bit destination buffer of the DMA.
      * @param snapshot Buffer of the same size that receives the copies.
+     * @param halves Whether each half of the buffer is a sequence.
      * @return True if the conversion was started, false otherwise.
      */
-    bool start_dma(std::span<uint16_t> buffer, std::span<uint16_t> snapshot);
+    bool start_dma(std::span<uint16_t> buffer, std::span<uint16_t> snapshot, bool halves = false);
 
     /**
      * @brief Read the last complete sequence.
@@ -102,6 +108,16 @@ public:
      * @return The number of sequences completed so far, which tells whether this one is new.
      */
     uint32_t read_snapshot(std::span<uint16_t> destination) const;
+
+    /**
+     * @brief Read the last complete sequence, and which half of the buffer it is.
+     *
+     * @param destination Buffer of the size of the snapshot that receives it.
+     * @param half Receives 0 if the last sequence was the first half of the buffer, 1 if the second;
+     * always 1 without halves.
+     * @return The number of sequences completed so far, which tells whether this one is new.
+     */
+    uint32_t read_snapshot(std::span<uint16_t> destination, uint8_t& half) const;
 
     /**
      * @brief Stop ADC conversion of regular group (and injected group in case of auto_injection mode).
@@ -172,6 +188,16 @@ public:
     static void on_sequence_complete(const ADC_HandleTypeDef* handle);
 
     /**
+     * @brief Count the first half of the buffer of a converter that keeps halves as a sequence.
+     *
+     * @note To be called by the half conversion complete callback only, with the same overrun
+     * rule as on_sequence_complete.
+     *
+     * @param handle Handle of the converter that completed half of its buffer.
+     */
+    static void on_half_complete(const ADC_HandleTypeDef* handle);
+
+    /**
      * @brief Mark a converter that an error stopped, for recover to restart it.
      *
      * @note To be called by the error callback only.
@@ -238,6 +264,14 @@ private:
      * @brief Number of sequences completed so far.
      */
     volatile uint32_t sequence{};
+
+    /**
+     * @brief Whether each half of the buffer is a sequence, and the half the last one filled.
+     */
+    ///@{
+    bool             halves{};
+    volatile uint8_t last_half{1};
+    ///@}
 
     /**
      * @brief Flag set by the error callback when an error stopped the converter.

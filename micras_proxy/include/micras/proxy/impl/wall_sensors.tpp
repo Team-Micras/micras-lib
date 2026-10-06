@@ -60,37 +60,67 @@ TWallSensors<num_of_sensors>::TWallSensors(const Config& config) :
 
     const bool  balanced = this->assign_ends(config);
     const bool  started = this->synchronize(false);
-    const float cycle_frequency = 2.0F * this->led_pwms.front().get_frequency() / static_cast<float>(scans_per_cycle);
+    const float frame_frequency = 2.0F * this->led_pwms.front().get_frequency() / static_cast<float>(scans_per_frame);
 
     this->initialized =
         balanced and started and this->adc.was_initialized() and this->burst.was_initialized() and
         config.adc.handle->Init.NbrOfConversion == num_of_sensors and
-        std::abs(cycle_frequency - config.fast_filter.sampling_frequency) <
+        std::abs(frame_frequency - config.fast_filter.sampling_frequency) <
             frequency_tolerance * config.fast_filter.sampling_frequency and
         std::ranges::all_of(this->led_pwms, [](const hal::Pwm& led_pwm) { return led_pwm.was_initialized(); });
 }
 
 template <uint8_t num_of_sensors>
 bool TWallSensors<num_of_sensors>::assign_ends(const Config& config) {
-    uint8_t peaks = 0;
-    uint8_t troughs = 0;
-
-    this->ends.fill(dark_end);
+    std::array<uint8_t, num_of_sensors> peaks{};
+    std::array<uint8_t, num_of_sensors> troughs{};
+    uint8_t                             peak_count = 0;
+    uint8_t                             trough_count = 0;
 
     for (uint8_t i = 0; i < num_of_sensors; i++) {
-        uint8_t&   count = config.led_pwms.at(i).inverted ? peaks : troughs;
-        const auto end = static_cast<uint8_t>(config.led_pwms.at(i).inverted ? 2 * count : 2 * count + 1);
-
-        if (end >= scans_per_cycle - 2) {
-            return false;
+        if (config.led_pwms.at(i).inverted) {
+            peaks.at(peak_count++) = i;
+        } else {
+            troughs.at(trough_count++) = i;
         }
-
-        this->ends.at(end) = i;
-        this->lit_end.at(i) = end;
-        count++;
     }
 
-    return peaks == troughs;
+    if (peak_count != trough_count) {
+        return false;
+    }
+
+    for (uint8_t frame_index = 0; frame_index < 2; frame_index++) {
+        uint8_t next_peak = 0;
+        uint8_t next_trough = 0;
+        uint8_t darks = 0;
+
+        for (uint8_t position = 0; position < scans_per_frame; position++) {
+            const auto end = static_cast<uint8_t>(frame_index * scans_per_frame + position);
+            const bool overflow = end % 2 == 0;
+            uint8_t    sensor = dark_end;
+
+            if (overflow and next_peak < peak_count) {
+                sensor = peaks.at(next_peak++);
+            } else if (not overflow and next_trough < trough_count) {
+                sensor = troughs.at(next_trough++);
+            }
+
+            this->ends.at(end) = sensor;
+
+            if (sensor == dark_end) {
+                this->dark_end_of.at(frame_index) = end;
+                darks++;
+            } else {
+                this->lit_end.at(frame_index).at(sensor) = end;
+            }
+        }
+
+        if (darks != 1) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 template <uint8_t num_of_sensors>
@@ -124,7 +154,7 @@ bool TWallSensors<num_of_sensors>::synchronize(bool restart) {
         this->adc.stop_dma();
     }
 
-    const bool converting = this->adc.start_dma(this->buffer, this->snapshot);
+    const bool converting = this->adc.start_dma(this->buffer, this->snapshot, true);
 
     this->burst.start();
     return armed and converting;
@@ -132,17 +162,9 @@ bool TWallSensors<num_of_sensors>::synchronize(bool restart) {
 
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_dark_counts(uint8_t sensor_index) const {
-    float   sum = 0.0F;
-    uint8_t count = 0;
-
-    for (uint8_t end = 0; end < scans_per_cycle; end++) {
-        if (this->ends.at(end) == dark_end) {
-            sum += static_cast<float>(this->scans.at(static_cast<std::size_t>(end * num_of_sensors + sensor_index)));
-            count++;
-        }
-    }
-
-    return sum / static_cast<float>(count);
+    return static_cast<float>(
+        this->scans.at(static_cast<std::size_t>(this->dark_end_of.at(this->frame) * num_of_sensors + sensor_index))
+    );
 }
 
 template <uint8_t num_of_sensors>
@@ -207,7 +229,7 @@ void TWallSensors<num_of_sensors>::update() {
         this->synchronize(true);
     }
 
-    const uint32_t current_sequence = this->adc.read_snapshot(this->scans);
+    const uint32_t current_sequence = this->adc.read_snapshot(this->scans, this->frame);
     const bool     is_new = current_sequence != this->sequence;
 
     this->sequence = current_sequence;
@@ -290,7 +312,7 @@ float TWallSensors<num_of_sensors>::get_raw_intensity(uint8_t sensor_index) cons
 template <uint8_t num_of_sensors>
 float TWallSensors<num_of_sensors>::get_crosstalk(uint8_t emitter, uint8_t receiver) const {
     const auto lit = static_cast<float>(
-        this->scans.at(static_cast<std::size_t>(this->lit_end.at(emitter) * num_of_sensors + receiver))
+        this->scans.at(static_cast<std::size_t>(this->lit_end.at(this->frame).at(emitter) * num_of_sensors + receiver))
     );
     return (lit - this->get_dark_counts(receiver)) / this->adc.get_max_reading();
 }
