@@ -56,7 +56,7 @@ void Localizer::correct(
 
         const float range = wall_model.get_range(reading.distance, sensor, hit);
 
-        if (std::min(range, hit.range) > this->config.max_range or
+        if (std::min(range, hit.range) > this->config.max_range or hit.cosine < this->min_incidence_cosine or
             not wall_model.is_footprint_clear(
                 hit, sensor, this->get_position_deviation(), this->get_orientation_deviation()
             )) {

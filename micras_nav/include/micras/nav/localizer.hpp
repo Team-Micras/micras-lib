@@ -66,7 +66,9 @@ public:
      * not know about, and the range comes out long by several percent. A reading is used when
      * either the range it reads or the range the pose predicts is within it, so that a pose that
      * drifted away from a wall has its readings rejected, and counted towards a recovery, instead
-     * of dropped.
+     * of dropped. The beam has to meet the wall within the maximum incidence of its perpendicular:
+     * at a grazing angle the spot it lights stretches along the wall, its near end lights the
+     * receiver most, and the range comes out short by far more than its deviation.
      *
      * The ends of the side walls are used as references along the path. An end is accepted while
      * the robot moves forward faster than the edge speed, since the only time it reverses is to
@@ -96,6 +98,7 @@ public:
         float      range_delay;
         float      range_correlation;
         float      max_range;
+        float      max_incidence;
         float      rest_window;
         float      edge_deviation;
         float      edge_window;
@@ -409,6 +412,11 @@ private:
      * @brief Radius the wheels roll on, under the load on their tires.
      */
     float rolling_radius;
+
+    /**
+     * @brief Cosine of the maximum incidence.
+     */
+    float min_incidence_cosine;
 
     /**
      * @brief Wheel angles at the last iteration.
