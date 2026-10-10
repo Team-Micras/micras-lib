@@ -73,12 +73,15 @@ void Imu::update() {
     this->fresh = false;
 
     if (transfer == hal::Spi::Transfer::RUNNING) {
+        this->diagnostics.busy++;
         return;
     }
 
     if (transfer == hal::Spi::Transfer::COMPLETE) {
         std::atomic_signal_fence(std::memory_order_seq_cst);
         this->read_response();
+    } else if (transfer == hal::Spi::Transfer::FAILED) {
+        this->diagnostics.failed++;
     }
 
     this->spi.start_transfer(this->command, this->response);
@@ -93,6 +96,8 @@ void Imu::read_response() {
     const uint8_t status = std::get<1>(this->response);
 
     if ((status & unused_status_bits) != 0) {
+        this->diagnostics.rejected++;
+        this->diagnostics.last_rejected_status = status;
         return;
     }
 
@@ -103,6 +108,7 @@ void Imu::read_response() {
     }
 
     if ((status & gyroscope_ready) == 0) {
+        this->diagnostics.stale++;
         return;
     }
 
@@ -111,6 +117,11 @@ void Imu::read_response() {
     }
 
     this->fresh = true;
+    this->diagnostics.samples++;
+}
+
+const Imu::Diagnostics& Imu::get_diagnostics() const {
+    return this->diagnostics;
 }
 
 bool Imu::is_new() const {

@@ -114,7 +114,44 @@ public:
      */
     static bool is_cpu_frequency_supported();
 
+    /**
+     * @brief Get the reset flags of the last reset, as the reset controller reported them.
+     *
+     * @return The raw flags, which init reads and clears; zero where there is no such controller.
+     */
+    static uint32_t get_reset_flags();
+
+    /**
+     * @brief Leave a mark that survives any reset but a power on, for telling where a program was
+     * when a reset stopped it.
+     *
+     * @param mark The mark.
+     */
+    static void set_trace(uint32_t mark);
+
+    /**
+     * @brief Get the mark the program left before the last reset.
+     *
+     * @return The mark, or zero after a power on, which leaves the memory undefined.
+     */
+    static uint32_t get_previous_trace();
+
+    /**
+     * @brief Get the status of the last fault of the core.
+     *
+     * @return The configurable fault status register, or zero where there is none.
+     */
+    static uint32_t get_fault_status();
+
 private:
+    /**
+     * @brief Reset flags of the last reset, and the mark left before it.
+     */
+    ///@{
+    static uint32_t reset_flags;
+    static uint32_t previous_trace;
+    ///@}
+
     /**
      * @brief Whether the last reset was caused by the independent watchdog.
      */

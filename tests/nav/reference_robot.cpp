@@ -19,7 +19,7 @@
 
 namespace micras::test {
 const nav::RobotModel reference_robot{
-    .maze = {.cell_size = 0.18F, .wall_thickness = 0.0126F},
+    .maze = {.cell_size = 0.18F, .wall_thickness = 0.0126F, .wall_minnaert = 1.0F},
     .chassis =
         {
             .mass = 0.07F,

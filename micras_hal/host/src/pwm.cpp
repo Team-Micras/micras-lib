@@ -44,24 +44,28 @@ Pwm::Pwm(const Config& config) : handle{config.handle}, channel{config.timer_cha
 }
 
 void Pwm::set_duty_cycle(float duty_cycle) {
-    duty_cycle = std::clamp(duty_cycle, 0.0F, 100.0F);
-
-    if (this->inverted) {
-        duty_cycle = 100.0F - duty_cycle;
-    }
-
     const uint32_t autoreload = this->handle->Instance->ARR;
-    const float    scaled = duty_cycle * static_cast<float>(autoreload + 1) * 0.01F;
-
-    // NOLINTNEXTLINE(bugprone-incorrect-roundings): the rounding the firmware's own driver does.
-    const auto  compare = static_cast<uint32_t>(scaled + 0.5F);
-    const float counts =
+    const uint32_t compare = this->get_compare(duty_cycle);
+    const float    counts =
         is_center_aligned(this->handle) ? static_cast<float>(autoreload) : static_cast<float>(autoreload + 1);
     const float active = std::min(100.0F, 100.0F * static_cast<float>(compare) / counts);
 
     host::PwmPort& port = host::Board::pwm(this->handle, this->channel);
     port.touched = true;
     port.duty_cycle = this->inverted ? 100.0F - active : active;
+}
+
+uint32_t Pwm::get_compare(float duty_cycle) const {
+    duty_cycle = std::clamp(duty_cycle, 0.0F, 100.0F);
+
+    if (this->inverted) {
+        duty_cycle = 100.0F - duty_cycle;
+    }
+
+    const float scaled = duty_cycle * static_cast<float>(this->handle->Instance->ARR + 1) * 0.01F;
+
+    // NOLINTNEXTLINE(bugprone-incorrect-roundings): the rounding the firmware's own driver does.
+    return static_cast<uint32_t>(scaled + 0.5F);
 }
 
 void Pwm::set_frequency(uint32_t frequency) {

@@ -6,6 +6,7 @@
 #include <array>
 #include <atomic>
 #include <bit>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
@@ -28,6 +29,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
  *
  * @param hadc Handle of the converter.
  */
+// NOLINTNEXTLINE(readability-identifier-naming) the name is fixed by the vendor HAL
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
+    micras::hal::AdcDma::on_half_complete(hadc);
+}
+
 // NOLINTNEXTLINE(readability-identifier-naming) the name is fixed by the vendor HAL
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef* hadc) {
     micras::hal::AdcDma::on_error(hadc);
@@ -75,16 +81,30 @@ bool AdcDma::start_dma(std::span<uint16_t> buffer) {
     return this->start_dma({std::bit_cast<uint32_t*>(buffer.data()), buffer.size()});
 }
 
-bool AdcDma::start_dma(std::span<uint16_t> buffer, std::span<uint16_t> snapshot) {
-    if (snapshot.size() != buffer.size()) {
+bool AdcDma::start_dma(std::span<uint16_t> buffer, std::span<uint16_t> snapshot, bool halves) {
+    if (snapshot.size() != buffer.size() or (halves and buffer.size() % 2 != 0)) {
         this->initialized = false;
         return false;
     }
 
     this->buffer = buffer;
     this->snapshot = snapshot;
+    this->halves = halves;
+    this->last_half = 1;
 
     return this->start_dma(buffer);
+}
+
+uint32_t AdcDma::read_snapshot(std::span<uint16_t> destination, uint8_t& half) const {
+    while (true) {
+        const uint32_t before = this->sequence;
+        half = this->last_half;
+        const uint32_t after = this->read_snapshot(destination);
+
+        if (after == before) {
+            return after;
+        }
+    }
 }
 
 uint32_t AdcDma::read_snapshot(std::span<uint16_t> destination) const {
@@ -118,7 +138,31 @@ void AdcDma::on_sequence_complete(const ADC_HandleTypeDef* handle) {
         return;
     }
 
-    std::ranges::copy(instance->buffer, instance->snapshot.begin());
+    if (instance->halves) {
+        const std::size_t middle = instance->buffer.size() / 2;
+        std::ranges::copy(instance->buffer.subspan(middle), instance->snapshot.subspan(middle).begin());
+    } else {
+        std::ranges::copy(instance->buffer, instance->snapshot.begin());
+    }
+
+    instance->last_half = 1;
+    instance->sequence = instance->sequence + 1;
+}
+
+void AdcDma::on_half_complete(const ADC_HandleTypeDef* handle) {
+    AdcDma* const instance = find(handle);
+
+    if (instance == nullptr or instance->stopped or not instance->halves) {
+        return;
+    }
+
+    if (__HAL_ADC_GET_FLAG(handle, ADC_FLAG_OVR)) {
+        instance->stopped = true;
+        return;
+    }
+
+    std::ranges::copy(instance->buffer.first(instance->buffer.size() / 2), instance->snapshot.begin());
+    instance->last_half = 0;
     instance->sequence = instance->sequence + 1;
 }
 

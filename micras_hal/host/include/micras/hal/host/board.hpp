@@ -64,6 +64,14 @@ public:
     static PwmDmaPort& pwm_dma(const void* timer, uint32_t channel);
 
     /**
+     * @brief Get the port of a timer whose compare registers its update DMA request reloads.
+     *
+     * @param timer Timer handle.
+     * @return The port.
+     */
+    static TimerBurstPort& timer_burst(const void* timer);
+
+    /**
      * @brief Get the port of an ADC.
      *
      * @param adc ADC handle.

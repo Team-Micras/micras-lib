@@ -85,4 +85,18 @@ bool Mcu::was_reset_by_watchdog() {
 bool Mcu::is_cpu_frequency_supported() {
     return true;
 }
+
+uint32_t Mcu::get_reset_flags() {
+    return 0;
+}
+
+void Mcu::set_trace(uint32_t /*mark*/) { }
+
+uint32_t Mcu::get_previous_trace() {
+    return 0;
+}
+
+uint32_t Mcu::get_fault_status() {
+    return 0;
+}
 }  // namespace micras::hal

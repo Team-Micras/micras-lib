@@ -14,7 +14,10 @@
 #include "micras/nav/state.hpp"
 
 namespace micras::nav {
-Localizer::Localizer(const Config& config) : config{config}, rolling_radius{config.model.rolling_radius(0.0F)} {
+Localizer::Localizer(const Config& config) :
+    config{config},
+    rolling_radius{config.model.rolling_radius(0.0F)},
+    min_incidence_cosine{std::cos(config.max_incidence)} {
     this->config.speed_window = std::clamp<uint8_t>(config.speed_window, 1, max_speed_window);
 
     this->set_covariance({
@@ -23,6 +26,10 @@ Localizer::Localizer(const Config& config) : config{config}, rolling_radius{conf
         config.initial_orientation_deviation * config.initial_orientation_deviation,
         config.initial_bias_deviation * config.initial_bias_deviation,
     });
+}
+
+void Localizer::set_gyroscope_scale(float scale) {
+    this->config.model.gyroscope_scale = scale;
 }
 
 void Localizer::reset(const Pose& pose, const Measurements& measurements) {
