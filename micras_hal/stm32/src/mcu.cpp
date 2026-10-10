@@ -43,8 +43,8 @@ static constexpr uint32_t watchdog_max_reload{0xFFF};
  *
  * @note An update of the prescaler or of the reload value takes up to five periods of the
  * prescaled clock of the watchdog, 40 ms at its largest divider of 256 from the 32 kHz oscillator,
- * and a refresh before it ends reloads the previous value: a window asked for as 30 s then lasts as
- * little as the previous reload at the new divider. This covers five such periods with the
+ * and a refresh before it ends reloads the previous value: a longer window then lasts only as long as
+ * the previous reload at the new divider. This covers five such periods with the
  * oscillator at its slowest, and is bounded so that an oscillator that never starts cannot hang
  * the boot.
  */

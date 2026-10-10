@@ -127,9 +127,8 @@ public:
     /**
      * @brief Turn the emitter of one sensor on or off, leaving the others as they are.
      *
-     * @note For measuring how much of each emitter's light reaches each receiver. A reading is the
-     * difference between the scans of the two emitter groups, so with a single emitter lit every
-     * receiver reads exactly the light that emitter puts into it, whichever group it belongs to.
+     * @note For measuring how much of each emitter's light reaches each receiver. An emitter that
+     * is switched off still takes its turn, unlit, so the receivers read only the emitters left on.
      *
      * @param sensor_index Index of the sensor whose emitter is switched.
      * @param on Whether the emitter is lit.
@@ -173,8 +172,8 @@ public:
     /**
      * @brief Get the reading of a sensor with its emitter off, as a fraction of the full scale.
      *
-     * @note The mean of the scans at the ends of the cycle where no emitter is lit, which is the
-     * ambient light the receiver sees.
+     * @note The scan at the end of the last frame where no emitter is lit, which is the ambient
+     * light the receiver sees.
      *
      * @param sensor_index Index of the sensor.
      * @return The dark reading.
@@ -476,7 +475,8 @@ private:
      *
      * @details Scan k is the one at end k of the cycle, the first end being the first overflow
      * after the timer starts, and the receiver of sensor i is rank i of each scan. Each half of
-     * the buffer is a frame, which the converter's DMA copies to the snapshot as soon as it is full.
+     * the buffer is a frame, which the transfer interrupt of the converter copies to the snapshot as
+     * soon as it is full.
      *
      * @note This depends on the ADC scanning exactly num_of_sensors channels, on the emitter timer
      * being center aligned with its trigger and its DMA request on the update event, and on an
@@ -488,7 +488,8 @@ private:
     std::array<uint16_t, scans_per_cycle * num_of_sensors> buffer{};
 
     /**
-     * @brief Copy of the buffer taken when a cycle completes, so that a cycle is never torn.
+     * @brief Copy of the buffer, taken one half at a time as each frame completes, so that a frame
+     * is never torn.
      */
     std::array<uint16_t, scans_per_cycle * num_of_sensors> snapshot{};
 
