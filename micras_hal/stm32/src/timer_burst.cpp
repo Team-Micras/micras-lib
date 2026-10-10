@@ -2,6 +2,7 @@
  * @file
  */
 
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -38,11 +39,16 @@ bool TimerBurst::arm(
     this->stop();
 
     const auto load = [timer](std::span<const uint32_t> values) {
-        volatile uint32_t* compare = &timer->CCR1;
+        const std::array<volatile uint32_t*, 4> compares{&timer->CCR1, &timer->CCR2, &timer->CCR3, &timer->CCR4};
+        std::size_t                             channel = 0;
 
         for (const uint32_t value : values) {
-            *compare = value;
-            compare++;
+            if (channel == compares.size()) {
+                break;
+            }
+
+            *compares.at(channel) = value;
+            channel++;
         }
     };
 

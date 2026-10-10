@@ -71,13 +71,14 @@ public:
     /**
      * @brief Configuration struct for the mission.
      *
-     * @note The start offset is the distance from the back edge of the start cell to the axle of
-     * the robot when a run starts, and the park clearance how much farther from that edge the
-     * return parks it, which keeps it off the wall behind it. The map profiles are the run profiles the map has to be complete
-     * for, borrowed for the lifetime of the mission. The times are how long to stand still before
-     * turning in place, at most while squaring up against a wall and between two looks at a wall
-     * that is still unknown, of which only so many are taken before giving up. The commit margin is
-     * kept between where the robot could still stop at the center of a cell and where it decides to.
+     * @note The start offset is the distance from the back edge of the start cell to the axle of the
+     * robot when a run starts, and the park clearance how much farther from that edge the return
+     * parks it, which keeps it off the wall behind it. The map profiles are the run profiles the map
+     * has to be complete for, borrowed for the lifetime of the mission. The times are how long to
+     * stand still before turning in place, at most while squaring up against a wall and between two
+     * looks at a wall that is still unknown, of which only so many are taken before giving up. The
+     * commit margin is kept between where the robot could still stop at the center of a cell and
+     * where it decides to.
      *
      * No field has a default value, here or in any other configuration of the navigation, so that
      * leaving one out of a configuration is a compiler warning instead of a silent zero.

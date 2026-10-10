@@ -62,8 +62,10 @@ uint32_t Mcu::previous_trace{};
 
 /**
  * @brief Mark left by set_trace, in memory the startup code neither loads nor clears.
+ *
+ * @note It outlives the program on purpose, and noinit is an attribute of GCC that clang does not know.
  */
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables) it outlives the program on purpose
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,clang-diagnostic-unknown-attributes)
 __attribute__((noinit)) static volatile uint32_t trace;
 
 void Mcu::init(const Config& config) {

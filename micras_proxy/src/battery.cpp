@@ -2,6 +2,8 @@
  * @file
  */
 
+#include <cstdint>
+
 #include "micras/proxy/battery.hpp"
 
 namespace micras::proxy {
