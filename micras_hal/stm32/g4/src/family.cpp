@@ -27,6 +27,14 @@ bool was_reset_by_watchdog() {
     return __HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) != 0;
 }
 
+uint32_t reset_flags() {
+    return RCC->CSR;
+}
+
+bool was_powered_on() {
+    return __HAL_RCC_GET_FLAG(RCC_FLAG_BORRST) != 0;
+}
+
 void freeze_watchdog_in_debug() {
     __HAL_DBGMCU_FREEZE_IWDG();
 }

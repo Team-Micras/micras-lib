@@ -154,12 +154,13 @@ public:
     /**
      * @brief Get the range to a wall from the distance a sensor reads for it.
      *
-     * @details A wall reflects diffusely, so the light a sensor gets back from it falls with the
-     * cosine of the angle between the axis and the perpendicular of the wall, and a reading is turned
-     * into a distance as if the wall were met at the angle of the calibration: square on for a front
-     * sensor and at 45 degrees for a diagonal one. Met at another angle, a wall reads as one nearer
-     * or farther by the square root of the ratio of the two cosines. A diagonal sensor that meets a
-     * wall square on, as it does all along a diagonal, reads it 16 % short.
+     * @details The light a sensor gets back from a wall falls with a power of the cosine of the
+     * angle between the axis and the perpendicular of the wall, the one of the maze's Minnaert
+     * exponent, and a reading is turned into a distance as if the wall were met at the angle of the
+     * calibration: square on for a front sensor and at 45 degrees for a diagonal one. Met at another
+     * angle, a wall reads as one nearer or farther by the square root of the ratio of the two
+     * powers. A diagonal sensor that meets a matte wall square on, as it does all along a diagonal,
+     * reads it 16 % short, and a glossy one much shorter.
      *
      * @param distance The distance read by the sensor.
      * @param sensor The index of the sensor.
@@ -191,6 +192,11 @@ private:
      * @brief Mounting of each sensor.
      */
     std::array<RobotModel::WallSensor, number_of_wall_sensors> sensors;
+
+    /**
+     * @brief Half the power of the cosine of the incidence the light sent back by a wall follows.
+     */
+    float range_exponent;
 
     /**
      * @brief Constant part of the range noise.

@@ -32,11 +32,17 @@ struct RobotModel {
     static constexpr float gravity{9.80665F};
 
     /**
-     * @brief Dimensions of the maze, in meters.
+     * @brief Dimensions of the maze, in meters, and how its walls reflect.
+     *
+     * @note The walls scatter light by Minnaert's law: the light a wall sends back to a sensor that
+     * lights it falls with the cosine of the angle between the axis and the perpendicular of the wall
+     * raised to twice the exponent less one. An exponent of one is a matte wall; a glossy one has a
+     * larger exponent and sends back much more light square on than at an angle.
      */
     struct Maze {
         float cell_size;
         float wall_thickness;
+        float wall_minnaert;
     };
 
     /**

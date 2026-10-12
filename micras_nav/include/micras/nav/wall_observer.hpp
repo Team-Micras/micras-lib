@@ -22,7 +22,9 @@ namespace micras::nav {
  * would lie on the face of that wall, allowing for how uncertain the pose is, which the wall model
  * answers from the geometry of the sensors. Every reading taken in those conditions is a vote:
  * for the wall when something is seen at the range the wall would be at, against it when nothing is
- * seen up to beyond that range. A blind reading does not vote, since a receiver that ambient light
+ * seen up to beyond that range. A saturated reading only tells that the wall is no farther than the
+ * distance it gives, so it votes for the wall when the wall would be within that, and never against
+ * it. A blind reading does not vote, since a receiver that ambient light
  * saturates sees nothing whether the wall is there or not. A wall is decided when enough votes
  * agree, and it is decided once.
  * A wall that never gets enough votes stays unknown rather than being guessed.
@@ -42,15 +44,18 @@ public:
      * @note The tolerance on the range is a constant part plus a part proportional to the range.
      * A wall can only be voted absent while it would be closer than the detection range, which has
      * to be inside of what the sensors can measure. The range delay is the delay of the filter the
-     * fast ranges went through.
+     * fast ranges went through. A wall can only be voted there while it is closer than the sighting
+     * range of the sensor that sees it, which keeps a sensor whose ray passes by a post from voting
+     * the wall beyond the post with the light the post sent back.
      */
     struct Config {
-        float  tolerance;
-        float  relative_tolerance;
-        float  detection_range;
-        float  max_angular_speed;
-        float  range_delay;
-        int8_t votes_to_decide;
+        float                                     tolerance;
+        float                                     relative_tolerance;
+        float                                     detection_range;
+        float                                     max_angular_speed;
+        float                                     range_delay;
+        int8_t                                    votes_to_decide;
+        std::array<float, number_of_wall_sensors> sighting_range;
     };
 
     /**

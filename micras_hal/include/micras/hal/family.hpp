@@ -62,6 +62,20 @@ void enable_caches();
 bool was_reset_by_watchdog();
 
 /**
+ * @brief Get the flags of the reset controller, before init clears them.
+ *
+ * @return The raw register.
+ */
+uint32_t reset_flags();
+
+/**
+ * @brief Check whether the last reset was a power on, which leaves the memory undefined.
+ *
+ * @return True after a power on or a brownout, false otherwise.
+ */
+bool was_powered_on();
+
+/**
  * @brief Stop the independent watchdog while the core is halted by a debugger.
  */
 void freeze_watchdog_in_debug();

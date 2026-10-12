@@ -24,6 +24,17 @@ namespace micras::proxy {
 class Storage {
 public:
     /**
+     * @brief Steps of a save, which it marks in the trace of the microcontroller as it reaches them,
+     * so that a reset in the middle of one tells which step it stopped in.
+     */
+    enum class Stage : uint16_t {
+        ERASING = 0x101,
+        WRITING_BODY = 0x102,
+        WRITING_HEADER = 0x103,
+        LOADING = 0x104,
+    };
+
+    /**
      * @brief Configuration struct for the storage.
      */
     struct Config {

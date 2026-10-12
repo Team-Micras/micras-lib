@@ -15,8 +15,11 @@ namespace micras::nav {
  * @brief Reading of one wall sensor.
  *
  * @details The distance is measured along the optical axis, in meters. It is valid when the receiver
- * sees anything above its noise, so a reading that is not valid means that nothing is within range. A receiver that
- * saturates reports the shortest distance it can measure.
+ * sees anything above its noise, so a reading that is not valid means that nothing is within range.
+ *
+ * A saturated reading is one whose receiver is at its ceiling, lit by more than it can measure. Its
+ * distance is then the shortest one the sensor can tell, so the wall is at most that far, and may be
+ * nearer.
  *
  * A blind reading is one whose receiver ambient light saturates, which says nothing about a wall.
  *
@@ -27,6 +30,7 @@ namespace micras::nav {
 struct WallReading {
     float distance;
     bool  valid;
+    bool  saturated;
     bool  blind;
     bool  is_new;
 };

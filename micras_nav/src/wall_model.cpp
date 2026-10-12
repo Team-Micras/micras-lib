@@ -12,6 +12,7 @@ namespace micras::nav {
 WallModel::WallModel(const Config& config) :
     maze_geometry{config.model.maze},
     sensors{config.model.wall_sensors},
+    range_exponent{(2.0F * config.model.maze.wall_minnaert - 1.0F) / 2.0F},
     range_noise{config.model.noise.wall_range},
     range_noise_per_meter{config.model.noise.wall_range_per_meter},
     min_range{config.min_range},
@@ -87,7 +88,7 @@ float WallModel::get_range(float distance, uint8_t sensor, const RayHit& hit) co
     const float sine = std::abs(std::sin(angle));
     const float calibrated = sine > 0.1F ? sine : std::abs(std::cos(angle));
 
-    return distance * std::sqrt(hit.cosine / calibrated);
+    return distance * std::pow(hit.cosine / calibrated, this->range_exponent);
 }
 
 float WallModel::get_range_deviation(float range) const {

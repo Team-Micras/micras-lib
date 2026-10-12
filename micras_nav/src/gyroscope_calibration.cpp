@@ -62,7 +62,7 @@ Reference GyroscopeCalibration::update(const Measurements& measurements, float b
         const WallReading& left = measurements.walls.at(this->config.left_sensor);
         const WallReading& right = measurements.walls.at(this->config.right_sensor);
 
-        if (left.valid and right.valid) {
+        if (left.valid and right.valid and not left.saturated and not right.saturated) {
             this->angle_sum += this->get_wall_angle(measurements);
             this->angle_count++;
         }

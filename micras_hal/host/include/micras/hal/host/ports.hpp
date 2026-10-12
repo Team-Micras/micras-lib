@@ -82,6 +82,41 @@ struct PwmPort : Port {
 };
 
 /**
+ * @brief A timer whose compare registers its update DMA request reloads from a table.
+ *
+ * @note The engine that emulates what the timer drives reads the rows from here: counting the updates
+ * since the counter started from zero, the first row is in force until update 0, the second from
+ * update 0 to update 1, and row k of the table from update k + 1 on. Every arm counts, so that a
+ * consumer can tell the cycle started over.
+ */
+struct TimerBurstPort : Port {
+    /**
+     * @brief Compare values in force until the first update.
+     */
+    std::span<const uint32_t> first;
+
+    /**
+     * @brief Compare values in force from the first update to the second.
+     */
+    std::span<const uint32_t> second;
+
+    /**
+     * @brief Rows the update DMA request loads, one after the other, circularly.
+     */
+    std::span<const uint32_t> table;
+
+    /**
+     * @brief Whether the counter runs.
+     */
+    bool running{false};
+
+    /**
+     * @brief Number of times the burst was armed, which restarts its cycle.
+     */
+    uint32_t arms{0};
+};
+
+/**
  * @brief One timer channel whose compare register a DMA stream feeds.
  */
 struct PwmDmaPort : Port {

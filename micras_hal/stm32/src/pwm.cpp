@@ -52,6 +52,10 @@ Pwm::Pwm(const Config& config) : handle{config.handle}, channel{config.timer_cha
 }
 
 void Pwm::set_duty_cycle(float duty_cycle) {
+    __HAL_TIM_SET_COMPARE(this->handle, this->channel, this->get_compare(duty_cycle));
+}
+
+uint32_t Pwm::get_compare(float duty_cycle) const {
     duty_cycle = std::clamp(duty_cycle, 0.0F, 100.0F);
 
     if (this->inverted) {
@@ -61,9 +65,7 @@ void Pwm::set_duty_cycle(float duty_cycle) {
     const float scaled = duty_cycle * static_cast<float>(__HAL_TIM_GET_AUTORELOAD(this->handle) + 1) * 0.01F;
 
     // NOLINTNEXTLINE(bugprone-incorrect-roundings)
-    const auto compare = static_cast<uint32_t>(scaled + 0.5F);
-
-    __HAL_TIM_SET_COMPARE(this->handle, this->channel, compare);
+    return static_cast<uint32_t>(scaled + 0.5F);
 }
 
 void Pwm::set_frequency(uint32_t frequency) {

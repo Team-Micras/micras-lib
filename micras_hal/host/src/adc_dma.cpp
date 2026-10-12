@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
@@ -53,16 +54,44 @@ bool AdcDma::start_dma(std::span<uint16_t> buffer) {
     return true;
 }
 
-bool AdcDma::start_dma(std::span<uint16_t> buffer, std::span<uint16_t> snapshot) {
-    if (snapshot.size() != buffer.size()) {
+bool AdcDma::start_dma(std::span<uint16_t> buffer, std::span<uint16_t> snapshot, bool halves) {
+    if (snapshot.size() != buffer.size() or (halves and buffer.size() % 2 != 0)) {
         this->initialized = false;
         return false;
     }
 
     this->buffer = buffer;
     this->snapshot = snapshot;
+    this->halves = halves;
+    this->last_half = 1;
 
-    return this->start_dma(buffer);
+    const bool started = this->start_dma(buffer);
+
+    if (halves) {
+        host::Board::adc(this->handle).complete = [adc = this->handle, first = true]() mutable {
+            if (first) {
+                on_half_complete(adc);
+            } else {
+                on_sequence_complete(adc);
+            }
+
+            first = not first;
+        };
+    }
+
+    return started;
+}
+
+uint32_t AdcDma::read_snapshot(std::span<uint16_t> destination, uint8_t& half) const {
+    while (true) {
+        const uint32_t before = this->sequence;
+        half = this->last_half;
+        const uint32_t after = this->read_snapshot(destination);
+
+        if (after == before) {
+            return after;
+        }
+    }
 }
 
 uint32_t AdcDma::read_snapshot(std::span<uint16_t> destination) const {
@@ -88,7 +117,26 @@ void AdcDma::on_sequence_complete(const ADC_HandleTypeDef* handle) {
         return;
     }
 
-    std::ranges::copy(instance->buffer, instance->snapshot.begin());
+    if (instance->halves) {
+        const std::size_t middle = instance->buffer.size() / 2;
+        std::ranges::copy(instance->buffer.subspan(middle), instance->snapshot.subspan(middle).begin());
+    } else {
+        std::ranges::copy(instance->buffer, instance->snapshot.begin());
+    }
+
+    instance->last_half = 1;
+    instance->sequence = instance->sequence + 1;
+}
+
+void AdcDma::on_half_complete(const ADC_HandleTypeDef* handle) {
+    AdcDma* const instance = find(handle);
+
+    if (instance == nullptr or instance->stopped or not instance->halves) {
+        return;
+    }
+
+    std::ranges::copy(instance->buffer.first(instance->buffer.size() / 2), instance->snapshot.begin());
+    instance->last_half = 0;
     instance->sequence = instance->sequence + 1;
 }
 

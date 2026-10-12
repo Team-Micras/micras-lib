@@ -111,9 +111,17 @@ private:
     hal::AdcDma adc;
 
     /**
-     * @brief Buffer to store the ADC values.
+     * @brief Buffer the DMA writes the conversions to.
+     *
+     * @note Nothing in the program writes it, so the compiler is free to assume it still holds its
+     * initial zeros. It is only ever read through a volatile access, once per update, into readings.
      */
     std::array<uint16_t, num_of_sensors> buffer{};
+
+    /**
+     * @brief Conversions copied out of the buffer by the last update, which every getter reads.
+     */
+    std::array<uint16_t, num_of_sensors> readings{};
 
     /**
      * @brief Reading of each sensor when no current is flowing.

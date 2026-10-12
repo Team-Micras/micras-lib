@@ -562,7 +562,8 @@ bool TMission<width, height>::finish_at_entry() {
         move.add(make_segment(SegmentKind::SPIN, std::numbers::pi_v<float>, this->get_center_pose(this->cell)));
         move.add(make_segment(SegmentKind::STOP, this->config.stop_time, this->get_center_pose(parked)));
         move.add(make_segment(
-            SegmentKind::STRAIGHT, this->config.start_offset - cell_size / 2.0F, this->get_center_pose(parked)
+            SegmentKind::STRAIGHT, this->config.start_offset + this->config.park_clearance - cell_size / 2.0F,
+            this->get_center_pose(parked)
         ));
     } else {
         return false;

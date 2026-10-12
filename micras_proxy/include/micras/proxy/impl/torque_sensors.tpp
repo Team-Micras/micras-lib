@@ -32,6 +32,7 @@ void TTorqueSensors<num_of_sensors>::update() {
     this->adc.recover();
 
     for (uint8_t i = 0; i < num_of_sensors; i++) {
+        this->readings.at(i) = *static_cast<const volatile uint16_t*>(&this->buffer.at(i));
         this->filters.at(i).update(this->get_adc_reading(i));
     }
 }
@@ -58,7 +59,7 @@ float TTorqueSensors<num_of_sensors>::get_current_raw(uint8_t sensor_index) cons
 
 template <uint8_t num_of_sensors>
 float TTorqueSensors<num_of_sensors>::get_adc_reading(uint8_t sensor_index) const {
-    return static_cast<float>(this->buffer.at(sensor_index)) / this->adc.get_max_reading() -
+    return static_cast<float>(this->readings.at(sensor_index)) / this->adc.get_max_reading() -
            this->base_reading.at(sensor_index);
 }
 

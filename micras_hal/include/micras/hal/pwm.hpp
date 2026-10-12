@@ -49,6 +49,17 @@ public:
     void set_duty_cycle(float duty_cycle);
 
     /**
+     * @brief Get the value of the compare register that gives a duty cycle, without writing it.
+     *
+     * @note For a table of compare values that something else loads into the register, such as the
+     * update DMA request of the timer.
+     *
+     * @param duty_cycle Duty cycle value in percent, which is clamped to the range from 0 to 100.
+     * @return The compare value, with the polarity of the output applied.
+     */
+    uint32_t get_compare(float duty_cycle) const;
+
+    /**
      * @brief Set the PWM frequency.
      *
      * @note Changing the pwm frequency will modify the autoreload and reset the counter,

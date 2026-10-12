@@ -61,12 +61,17 @@ bool TWallObserver<width, height>::update(
         const float tolerance = this->config.tolerance + this->config.relative_tolerance * hit.range;
         int8_t&     count = this->votes.at(get_index(hit.wall));
 
-        if (reading.valid and std::abs(reading.distance - hit.range) <= tolerance) {
+        const bool seen = reading.saturated ? hit.range <= reading.distance + tolerance :
+                                              reading.valid and std::abs(reading.distance - hit.range) <= tolerance;
+
+        if (seen) {
+            if (hit.range > this->config.sighting_range.at(sensor)) {
+                continue;
+            }
+
             count = static_cast<int8_t>(std::min<int16_t>(count + 1, this->config.votes_to_decide));
-        } else if (
-            (not reading.valid or reading.distance > hit.range + tolerance) and
-            hit.range <= this->config.detection_range
-        ) {
+        } else if (not reading.saturated and (not reading.valid or reading.distance > hit.range + tolerance) and
+                   hit.range <= this->config.detection_range) {
             count = static_cast<int8_t>(std::max<int16_t>(count - 1, -this->config.votes_to_decide));
         } else {
             continue;

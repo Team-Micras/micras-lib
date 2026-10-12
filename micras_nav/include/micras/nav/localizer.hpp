@@ -30,7 +30,8 @@ namespace micras::nav {
  * Every correction goes through three guards: the illuminated spot has to lie on the face of a
  * single known wall, the innovation has to be plausible for what the filter believes, and the
  * correction is capped, so that a wrong reading is rejected and a wrong wall in the map can only
- * drag the pose slowly.
+ * drag the pose slowly. A saturated reading is not a range, only a bound on one, and corrects
+ * nothing.
  *
  * @note The covariance is kept as the factors of `P = U * D * U^T`, with U unit upper triangular and
  * D diagonal, and updated with the algorithms of Thornton and Bierman. In single precision this
@@ -65,7 +66,9 @@ public:
      * not know about, and the range comes out long by several percent. A reading is used when
      * either the range it reads or the range the pose predicts is within it, so that a pose that
      * drifted away from a wall has its readings rejected, and counted towards a recovery, instead
-     * of dropped.
+     * of dropped. The beam has to meet the wall within the maximum incidence of its perpendicular:
+     * at a grazing angle the spot it lights stretches along the wall, its near end lights the
+     * receiver most, and the range comes out short by far more than its deviation.
      *
      * The ends of the side walls are used as references along the path. An end is accepted while
      * the robot moves forward faster than the edge speed, since the only time it reverses is to
@@ -95,6 +98,7 @@ public:
         float      range_delay;
         float      range_correlation;
         float      max_range;
+        float      max_incidence;
         float      rest_window;
         float      edge_deviation;
         float      edge_window;
@@ -136,6 +140,15 @@ public:
      * @param pose The pose of the robot in the maze frame.
      * @param measurements The current measurements, which give the reference for the encoders.
      */
+    /**
+     * @brief Replace the scale the angular rate of the gyroscope is multiplied by.
+     *
+     * @note For a scale measured on the robot, which replaces the one of the robot model.
+     *
+     * @param scale The scale.
+     */
+    void set_gyroscope_scale(float scale);
+
     void reset(const Pose& pose, const Measurements& measurements);
 
     /**
@@ -248,6 +261,16 @@ private:
      * @brief Number of walls a line is followed over to find an edge.
      */
     static constexpr uint8_t edge_search_cells{4};
+
+    /**
+     * @brief Minimum cosine between the heading and a line of walls a sensor locks on.
+     *
+     * @note Edges are only looked for on the walls the robot travels along. On a wall across the path
+     * the axis does not move along it in the direction of the travel, so the edge the map gives is
+     * not the one the reading passes, and near the corner of a post the reading barely changes when
+     * the axis leaves the wall, which repeats the same wrong correction while it flickers.
+     */
+    static constexpr float min_edge_alignment{0.5F};
 
     /**
      * @brief Indexes of the states.
@@ -399,6 +422,11 @@ private:
      * @brief Radius the wheels roll on, under the load on their tires.
      */
     float rolling_radius;
+
+    /**
+     * @brief Cosine of the maximum incidence.
+     */
+    float min_incidence_cosine;
 
     /**
      * @brief Wheel angles at the last iteration.

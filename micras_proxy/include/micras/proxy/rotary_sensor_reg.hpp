@@ -8,7 +8,7 @@
 #include <cstdint>
 
 /**
- * @brief Registers struct for the rotary sensor configuration.
+ * @brief Registers struct for the configuration of an AS5047U.
  */
 struct Registers {
     /**
