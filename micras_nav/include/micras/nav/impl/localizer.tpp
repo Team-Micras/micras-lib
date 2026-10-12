@@ -117,7 +117,11 @@ void Localizer::track_edge(
         }
     }
 
-    const bool on_wall = hit.valid and hit.state == WallState::WALL and hit.range < this->config.edge_range and
+    const float alignment =
+        std::abs(hit.vertical ? std::sin(this->state.pose.orientation) : std::cos(this->state.pose.orientation));
+
+    const bool on_wall = hit.valid and hit.state == WallState::WALL and alignment >= min_edge_alignment and
+                         hit.range < this->config.edge_range and
                          std::abs(reading.distance - hit.range) < tolerance(hit.range) and reading.valid and
                          not reading.saturated;
 

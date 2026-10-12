@@ -263,6 +263,16 @@ private:
     static constexpr uint8_t edge_search_cells{4};
 
     /**
+     * @brief Minimum cosine between the heading and a line of walls a sensor locks on.
+     *
+     * @note Edges are only looked for on the walls the robot travels along. On a wall across the path
+     * the axis does not move along it in the direction of the travel, so the edge the map gives is
+     * not the one the reading passes, and near the corner of a post the reading barely changes when
+     * the axis leaves the wall, which repeats the same wrong correction while it flickers.
+     */
+    static constexpr float min_edge_alignment{0.5F};
+
+    /**
      * @brief Indexes of the states.
      */
     ///@{
