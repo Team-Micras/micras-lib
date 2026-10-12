@@ -6,8 +6,10 @@
 #define MICRAS_PROXY_ROTARY_SENSOR_HPP
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <variant>
 
 #include "micras/hal/crc.hpp"
 #include "micras/hal/encoder.hpp"
@@ -19,23 +21,39 @@ namespace micras::proxy {
  *
  * @note The angle is decoded from the quadrature output of the sensor by a hardware timer, while
  * SPI is used only to configure the sensor at construction and to read back that configuration.
+ *
+ * @note Two chips are supported, each in its own SPI protocol: the AS5047U in 24-bit frames
+ * protected by a CRC, and the AS5047D in 16-bit frames protected by an even parity bit. The type of
+ * the registers in the configuration selects the chip.
  */
 class RotarySensor {
 public:
+#include "micras/proxy/rotary_sensor_as5047d_reg.hpp"
 #include "micras/proxy/rotary_sensor_reg.hpp"
 
     /**
      * @brief Rotary sensor configuration struct.
      *
      * @note There is no resolution field: the pulses per revolution are whatever the ABIRES field
-     * of the sensor says after configuration, so the scale factor is read back from the hardware
-     * instead of being asserted here.
+     * of the sensor (and ABIBIN, on an AS5047D) says after configuration, so the scale factor is
+     * read back from the hardware instead of being asserted here.
+     *
+     * @note Registers configures an AS5047U and As5047dRegisters an AS5047D. The CRC unit is only
+     * used by the AS5047U.
      */
     struct Config {
-        hal::Spi::Config     spi;
-        hal::Encoder::Config encoder;
-        hal::Crc::Config     crc;
-        Registers            registers;
+        hal::Spi::Config                          spi;
+        hal::Encoder::Config                      encoder;
+        hal::Crc::Config                          crc;
+        std::variant<Registers, As5047dRegisters> registers;
+    };
+
+    /**
+     * @brief Chips the sensor can be.
+     */
+    enum class Chip : uint8_t {
+        AS5047U,
+        AS5047D,
     };
 
     /**
@@ -66,6 +84,34 @@ public:
 
         Fields   fields;
         uint32_t raw;
+    };
+
+    /**
+     * @brief Frame sent to an AS5047D to address one of its registers.
+     */
+    union ParityCommandFrame {
+        struct __attribute__((__packed__)) Fields {
+            uint16_t address : 14;
+            uint8_t  rw      : 1;
+            uint8_t  parity  : 1;
+        };
+
+        Fields   fields;
+        uint16_t raw;
+    };
+
+    /**
+     * @brief Frame carrying a register value of an AS5047D in either direction.
+     */
+    union ParityDataFrame {
+        struct __attribute__((__packed__)) Fields {
+            uint16_t data   : 14;
+            uint8_t  error  : 1;
+            uint8_t  parity : 1;
+        };
+
+        Fields   fields;
+        uint16_t raw;
     };
 
     /**
@@ -124,9 +170,14 @@ public:
 
 private:
     /**
-     * @brief Number of bytes of a sensor SPI frame.
+     * @brief Number of bytes of an AS5047U SPI frame.
      */
     static constexpr uint8_t frame_size{3};
+
+    /**
+     * @brief Number of bytes of an AS5047D SPI frame.
+     */
+    static constexpr uint8_t parity_frame_size{2};
 
     /**
      * @brief Time the chip select is kept high after a frame, in microseconds.
@@ -144,6 +195,19 @@ private:
     static constexpr std::array<uint16_t, 8> pulses_per_revolution{{1024, 512, 256, 2048, 4096, 0, 0, 0}};
 
     /**
+     * @brief Pulses per revolution of an AS5047D for each value of ABIRES, with ABIBIN cleared.
+     */
+    static constexpr std::array<uint16_t, 8> as5047d_decimal_pulses_per_revolution{
+        {500, 400, 300, 200, 100, 50, 25, 8}
+    };
+
+    /**
+     * @brief Pulses per revolution of an AS5047D for each value of ABIRES, with ABIBIN set, zero
+     * when the datasheet defines none.
+     */
+    static constexpr std::array<uint16_t, 8> as5047d_binary_pulses_per_revolution{{512, 256, 0, 0, 0, 0, 0, 0}};
+
+    /**
      * @brief Serialize a frame into the wire order of the sensor, filling in its CRC.
      *
      * @note The sensor defines the CRC over the two most significant bytes of the frame, which
@@ -155,22 +219,73 @@ private:
     std::array<uint8_t, frame_size> serialize(uint32_t raw);
 
     /**
+     * @brief Serialize an AS5047D frame into its wire order, filling in its even parity bit.
+     *
+     * @param raw The 16 bit frame, without a valid parity bit.
+     * @return The frame as two bytes, most significant first.
+     */
+    static std::array<uint8_t, parity_frame_size> serialize_with_parity(uint16_t raw);
+
+    /**
      * @brief Exchange one frame with the sensor.
      *
-     * @note The chip select is kept high for a while after the frame, since the sensor needs 350 ns
-     * between two frames and the next one would otherwise start within about 200 ns.
+     * @note The chip select is kept high for a while after the frame, since both sensors need
+     * 350 ns between two frames and the next one would otherwise start within about 200 ns.
      *
+     * @tparam size Number of bytes of the frame.
      * @param frame The frame to send.
      * @return The frame received while sending, or nothing if the transfer failed.
      */
-    std::optional<uint32_t> exchange_frame(const std::array<uint8_t, frame_size>& frame);
+    template <std::size_t size>
+    std::optional<uint32_t> exchange_frame(const std::array<uint8_t, size>& frame);
 
     /**
-     * @brief Read back the ABIRES field and derive the counts per revolution from it.
+     * @brief Read a register of an AS5047D, in its 16-bit frames.
+     *
+     * @param address Address of the register.
+     * @return The register value, or nothing if a transfer failed or a frame was rejected.
+     */
+    std::optional<uint16_t> read_parity_register(uint16_t address);
+
+    /**
+     * @brief Write a register of an AS5047D, in its 16-bit frames.
+     *
+     * @param address Address of the register.
+     * @param data Value to write.
+     * @return True if both frames were transferred, false otherwise.
+     */
+    bool write_parity_register(uint16_t address, uint16_t data);
+
+    /**
+     * @brief Configure an AS5047U and read its resolution back.
+     *
+     * @param registers Values written to the registers of the sensor.
+     * @return Counts per revolution, or nothing if the read back failed.
+     */
+    std::optional<uint32_t> configure(const Registers& registers);
+
+    /**
+     * @brief Configure an AS5047D and read its resolution back.
+     *
+     * @param registers Values written to the registers of the sensor.
+     * @return Counts per revolution, or nothing if the read back failed.
+     */
+    std::optional<uint32_t> configure(const As5047dRegisters& registers);
+
+    /**
+     * @brief Read back the ABIRES field of an AS5047U and derive the counts per revolution from it.
      *
      * @return Counts per revolution, or nothing if the read failed or reported a reserved value.
      */
     std::optional<uint32_t> read_resolution();
+
+    /**
+     * @brief Read back the ABIRES and ABIBIN fields of an AS5047D and derive the counts per
+     * revolution from them.
+     *
+     * @return Counts per revolution, or nothing if a read failed or reported an undefined value.
+     */
+    std::optional<uint32_t> read_as5047d_resolution();
 
     /**
      * @brief SPI for the rotary sensor configuration.
@@ -186,6 +301,11 @@ private:
      * @brief CRC for the rotary sensor configuration.
      */
     hal::Crc crc;
+
+    /**
+     * @brief Chip the sensor is, which sets the SPI protocol.
+     */
+    Chip chip;
 
     /**
      * @brief Counts per revolution of the quadrature decoder, read back from the sensor.
