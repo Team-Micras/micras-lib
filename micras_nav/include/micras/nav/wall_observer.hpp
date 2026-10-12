@@ -44,15 +44,18 @@ public:
      * @note The tolerance on the range is a constant part plus a part proportional to the range.
      * A wall can only be voted absent while it would be closer than the detection range, which has
      * to be inside of what the sensors can measure. The range delay is the delay of the filter the
-     * fast ranges went through.
+     * fast ranges went through. A wall can only be voted there while it is closer than the sighting
+     * range of the sensor that sees it, which keeps a sensor whose ray passes by a post from voting
+     * the wall beyond the post with the light the post sent back.
      */
     struct Config {
-        float  tolerance;
-        float  relative_tolerance;
-        float  detection_range;
-        float  max_angular_speed;
-        float  range_delay;
-        int8_t votes_to_decide;
+        float                                     tolerance;
+        float                                     relative_tolerance;
+        float                                     detection_range;
+        float                                     max_angular_speed;
+        float                                     range_delay;
+        int8_t                                    votes_to_decide;
+        std::array<float, number_of_wall_sensors> sighting_range;
     };
 
     /**
